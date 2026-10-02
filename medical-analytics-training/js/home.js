@@ -16,8 +16,7 @@ function renderHome() {
       <h1 id="hero-title">${L("Medical analytics, explained step by step", "تحليلات البيانات الطبية، مشروحة خطوة بخطوة")}</h1>
       <p class="lead">${L("Two interactive lectures that follow one realistic patient-screening training dataset — from a messy file to trustworthy insight, and from insight to dashboards, automation and AI assistance. Every step is explained in plain language and shown live; there is nothing to download.",
         "محاضرتان تفاعليتان تتبعان مجموعة بيانات تدريبية واقعية لفحص المرضى — من ملف غير منظم إلى رؤية موثوقة، ومن الرؤية إلى لوحات المؤشرات والأتمتة والمساعدة بالذكاء الاصطناعي. كل خطوة مشروحة بلغة بسيطة ومعروضة مباشرة؛ ولا شيء لتنزيله.")}</p>
-      <div class="row mt-3"><a class="btn btn-primary btn-lg" href="lecture-1.html">${L("Start Lecture 1", "ابدأ المحاضرة 1")} ${ICON.arrowR}</a><a class="btn btn-lg" href="lecture-2.html">${L("Go to Lecture 2", "انتقل إلى المحاضرة 2")}</a></div>
-      <p class="small muted mt-2 mb-0">${L("Presenter", "المقدّم")}: ${esc(BRAND.presenterName)}</p>
+      <p class="small muted mt-3 mb-0">${L("Presenter", "المقدّم")}: ${esc(BRAND.presenterName)}</p>
     </div>
     <div class="hero-panel"><div class="chart-title">${L("Monthly screening visits", "زيارات الفحص الشهرية")}</div><div class="chart-sub">${L("History and 12-month forecast — one of the things you will build", "التاريخ وتوقع 12 شهرًا — أحد الأشياء التي ستبنيها")}</div><div id="hero-chart"></div></div>
   </div></section>
@@ -25,11 +24,11 @@ function renderHome() {
     <article class="card lecture-card"><div class="num-big">01</div><div class="meta"><span class="badge">${L("20 sections", "20 قسمًا")}</span></div>
       <h2 style="font-size:1.35rem">${L("From Messy Medical Data to Statistical Insight, Machine Learning and Forecasting", "من البيانات الطبية غير المنظمة إلى الرؤية الإحصائية وتعلّم الآلة والتنبؤ")}</h2>
       <p class="muted">${L(`How ${fmtInt(q.rows)} messy records become trustworthy numbers: quality checks, cleaning, statistics, exploration, testing, prediction and forecasting.`, `كيف تتحول ${fmtInt(q.rows)} سجلًا غير منظم إلى أرقام موثوقة: فحوص الجودة، والتنظيف، والإحصاء، والاستكشاف، والاختبار، والتنبؤ، والتوقع.`)}</p>
-      ${pills(l1)}<div class="actions"><a class="btn btn-primary" href="lecture-1.html">${L("Open Lecture 1", "افتح المحاضرة 1")} ${ICON.arrowR}</a></div></article>
+      ${pills(l1)}</article>
     <article class="card lecture-card"><div class="num-big">02</div><div class="meta"><span class="badge">${L("12 sections", "12 قسمًا")}</span></div>
       <h2 style="font-size:1.35rem">${L("From Statistical Insight to BI, Automation and AI Agents", "من الرؤية الإحصائية إلى ذكاء الأعمال والأتمتة ووكلاء الذكاء الاصطناعي")}</h2>
       <p class="muted">${L("How organisations use those numbers: good KPIs, SQL, a working dashboard, automatic pipelines and reports, and AI assistants and agents kept safe with guardrails.", "كيف تستخدم المؤسسات هذه الأرقام: مؤشرات أداء جيدة، وSQL، ولوحة مؤشرات عاملة، ومسارات وتقارير آلية، ومساعدون ووكلاء أذكياء تحميهم الضوابط.")}</p>
-      ${pills(l2)}<div class="actions"><a class="btn btn-primary" href="lecture-2.html">${L("Open Lecture 2", "افتح المحاضرة 2")} ${ICON.arrowR}</a></div></article>
+      ${pills(l2)}</article>
   </div></div></section>
   <section class="page-section" id="data" aria-labelledby="data-title"><div class="container">
     <div class="eyebrow">${L("The data", "البيانات")}</div><h2 id="data-title">${L("Download the data used in both lectures", "نزّل البيانات المستخدمة في المحاضرتين")}</h2>

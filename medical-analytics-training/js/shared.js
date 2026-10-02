@@ -1147,8 +1147,8 @@ const Shell = (() => {
         <div><img data-logo src="${BRAND.logos[App.theme]}" alt="${esc(BRAND.department)}" style="height:64px;width:auto;margin-bottom:10px">
           <p>${t("footer.about")}</p></div>
         <div><h4>${t("footer.learn")}</h4><ul>
-          <li><a href="lecture-1.html">${t("nav.l1")} — ${L("From messy data to insight", "من البيانات غير المنظمة إلى الرؤية")}</a></li>
-          <li><a href="lecture-2.html">${t("nav.l2")} — ${L("From insight to BI, automation & AI", "من الرؤية إلى ذكاء الأعمال والأتمتة والذكاء الاصطناعي")}</a></li>
+          ${page === "home" ? "" : `<li><a href="lecture-1.html">${t("nav.l1")} — ${L("From messy data to insight", "من البيانات غير المنظمة إلى الرؤية")}</a></li>
+          <li><a href="lecture-2.html">${t("nav.l2")} — ${L("From insight to BI, automation & AI", "من الرؤية إلى ذكاء الأعمال والأتمتة والذكاء الاصطناعي")}</a></li>`}
           <li><a href="index.html#data">${L("Download the data", "تنزيل البيانات")}</a></li>
           <li><a href="agent-report.html">${L("Data Agent — official report", "وكيل البيانات — التقرير الرسمي")}</a></li></ul></div>
       </div>
