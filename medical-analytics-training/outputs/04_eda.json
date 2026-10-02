@@ -1,0 +1,80 @@
+{
+ "counts": {
+  "risk_group": {
+   "Low": 375,
+   "Moderate": 389,
+   "High": 436
+  },
+  "sex": {
+   "Female": 616,
+   "Male": 572,
+   "nan": 12
+  },
+  "smoking_status": {
+   "Non-Smoker": 907,
+   "Smoker": 257,
+   "nan": 36
+  },
+  "clinic_id": {
+   "CL01": 271,
+   "CL02": 224,
+   "CL03": 206,
+   "CL04": 172,
+   "CL05": 168,
+   "CL06": 135,
+   "nan": 24
+  }
+ },
+ "group_means": {
+  "Low": {
+   "age": 39.36,
+   "bmi": 24.82,
+   "fasting_glucose": 84.51,
+   "hba1c": 5.09
+  },
+  "Moderate": {
+   "age": 52.23,
+   "bmi": 26.53,
+   "fasting_glucose": 91.8,
+   "hba1c": 5.29
+  },
+  "High": {
+   "age": 62.01,
+   "bmi": 29.59,
+   "fasting_glucose": 112.13,
+   "hba1c": 5.94
+  }
+ },
+ "clinic_by_risk": {
+  "CL01": {
+   "Low": 89,
+   "Moderate": 97,
+   "High": 85
+  },
+  "CL02": {
+   "Low": 73,
+   "Moderate": 66,
+   "High": 85
+  },
+  "CL03": {
+   "Low": 51,
+   "Moderate": 69,
+   "High": 86
+  },
+  "CL04": {
+   "Low": 56,
+   "Moderate": 57,
+   "High": 59
+  },
+  "CL05": {
+   "Low": 59,
+   "Moderate": 49,
+   "High": 60
+  },
+  "CL06": {
+   "Low": 38,
+   "Moderate": 44,
+   "High": 53
+  }
+ }
+}

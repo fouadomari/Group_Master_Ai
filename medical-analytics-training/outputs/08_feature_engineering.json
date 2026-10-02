@@ -1,0 +1,47 @@
+{
+ "categories": {
+  "age_group": {
+   "18-34": 149,
+   "35-49": 368,
+   "50-64": 440,
+   "65+": 235,
+   "nan": 8
+  },
+  "bmi_category": {
+   "Underweight": 2,
+   "Normal": 406,
+   "Overweight": 474,
+   "Obese": 265,
+   "nan": 53
+  },
+  "exercise_category": {
+   "None": 35,
+   "Low (1-2)": 471,
+   "Moderate (3-4)": 519,
+   "High (5-7)": 109,
+   "nan": 66
+  }
+ },
+ "missing_indicators": {
+  "bmi_missing": 53,
+  "fasting_glucose_missing": 64,
+  "hba1c_missing": 75,
+  "medication_adherence_pct_missing": 123
+ },
+ "frequent_visitors": 139,
+ "pulse_pressure": {
+  "mean": 45.0,
+  "median": 45.0
+ },
+ "map": {
+  "mean": 90.9
+ },
+ "glucose_mean_by_bmi_category": {
+  "Underweight": 67.0,
+  "Normal": 87.8,
+  "Overweight": 98.1,
+  "Obese": 110.2
+ },
+ "n_features_before": 20,
+ "n_features_after": 32
+}

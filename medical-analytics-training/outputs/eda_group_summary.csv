@@ -1,0 +1,4 @@
+risk_group,age,bmi,fasting_glucose,hba1c,n
+Low,39.36,24.82,84.51,5.09,375
+Moderate,52.23,26.53,91.8,5.29,389
+High,62.01,29.59,112.13,5.94,436

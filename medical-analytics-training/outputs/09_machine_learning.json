@@ -1,0 +1,238 @@
+{
+ "n_train": 900,
+ "n_test": 300,
+ "features": [
+  "age",
+  "bmi",
+  "systolic_bp",
+  "diastolic_bp",
+  "heart_rate",
+  "fasting_glucose",
+  "hba1c",
+  "total_cholesterol",
+  "exercise_days_per_week",
+  "family_history_flag",
+  "medication_adherence_pct",
+  "visits_last_year",
+  "is_smoker",
+  "is_male"
+ ],
+ "class_balance": {
+  "High": 436,
+  "Moderate": 389,
+  "Low": 375
+ },
+ "classifiers": {
+  "Logistic Regression": {
+   "train_accuracy": 0.75,
+   "test_accuracy": 0.737
+  },
+  "Random Forest": {
+   "train_accuracy": 0.98,
+   "test_accuracy": 0.747
+  },
+  "Gradient Boosting": {
+   "train_accuracy": 0.954,
+   "test_accuracy": 0.76
+  }
+ },
+ "depth_curve": [
+  {
+   "depth": 1,
+   "train": 0.56,
+   "test": 0.547
+  },
+  {
+   "depth": 2,
+   "train": 0.591,
+   "test": 0.563
+  },
+  {
+   "depth": 3,
+   "train": 0.624,
+   "test": 0.597
+  },
+  {
+   "depth": 4,
+   "train": 0.686,
+   "test": 0.607
+  },
+  {
+   "depth": 5,
+   "train": 0.75,
+   "test": 0.697
+  },
+  {
+   "depth": 6,
+   "train": 0.797,
+   "test": 0.677
+  },
+  {
+   "depth": 7,
+   "train": 0.834,
+   "test": 0.67
+  },
+  {
+   "depth": 8,
+   "train": 0.88,
+   "test": 0.683
+  },
+  {
+   "depth": 9,
+   "train": 0.92,
+   "test": 0.687
+  },
+  {
+   "depth": 10,
+   "train": 0.956,
+   "test": 0.68
+  },
+  {
+   "depth": 11,
+   "train": 0.968,
+   "test": 0.66
+  },
+  {
+   "depth": 12,
+   "train": 0.982,
+   "test": 0.687
+  },
+  {
+   "depth": 13,
+   "train": 0.991,
+   "test": 0.693
+  },
+  {
+   "depth": 14,
+   "train": 0.997,
+   "test": 0.7
+  },
+  {
+   "depth": 15,
+   "train": 0.998,
+   "test": 0.683
+  }
+ ],
+ "leakage": {
+  "test_accuracy_with_leakage": 0.99,
+  "test_accuracy_without": 0.747
+ },
+ "rf_importance": [
+  {
+   "feature": "age",
+   "importance": 0.1928
+  },
+  {
+   "feature": "systolic_bp",
+   "importance": 0.1697
+  },
+  {
+   "feature": "fasting_glucose",
+   "importance": 0.1431
+  },
+  {
+   "feature": "bmi",
+   "importance": 0.0884
+  },
+  {
+   "feature": "hba1c",
+   "importance": 0.0794
+  },
+  {
+   "feature": "diastolic_bp",
+   "importance": 0.0667
+  },
+  {
+   "feature": "total_cholesterol",
+   "importance": 0.0606
+  },
+  {
+   "feature": "medication_adherence_pct",
+   "importance": 0.0452
+  },
+  {
+   "feature": "exercise_days_per_week",
+   "importance": 0.0401
+  },
+  {
+   "feature": "heart_rate",
+   "importance": 0.0397
+  },
+  {
+   "feature": "visits_last_year",
+   "importance": 0.0279
+  },
+  {
+   "feature": "is_smoker",
+   "importance": 0.0266
+  },
+  {
+   "feature": "family_history_flag",
+   "importance": 0.011
+  },
+  {
+   "feature": "is_male",
+   "importance": 0.0088
+  }
+ ],
+ "linear_coefficients": [
+  {
+   "feature": "is_smoker",
+   "coef": 12.9728
+  },
+  {
+   "feature": "family_history_flag",
+   "coef": 7.7367
+  },
+  {
+   "feature": "hba1c",
+   "coef": 5.1328
+  },
+  {
+   "feature": "exercise_days_per_week",
+   "coef": -2.0864
+  },
+  {
+   "feature": "bmi",
+   "coef": 1.1829
+  },
+  {
+   "feature": "is_male",
+   "coef": -0.9918
+  },
+  {
+   "feature": "age",
+   "coef": 0.7193
+  },
+  {
+   "feature": "systolic_bp",
+   "coef": 0.4032
+  },
+  {
+   "feature": "medication_adherence_pct",
+   "coef": -0.2057
+  },
+  {
+   "feature": "diastolic_bp",
+   "coef": 0.1458
+  },
+  {
+   "feature": "visits_last_year",
+   "coef": -0.1441
+  },
+  {
+   "feature": "fasting_glucose",
+   "coef": 0.103
+  },
+  {
+   "feature": "total_cholesterol",
+   "coef": 0.0652
+  },
+  {
+   "feature": "heart_rate",
+   "coef": 0.0267
+  }
+ ],
+ "regression_n_train": 876,
+ "regression_n_test": 293
+}

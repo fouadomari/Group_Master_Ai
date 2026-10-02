@@ -1,0 +1,49 @@
+step,column,rule,rows_affected
+0,*,Rows received,1236
+1,patient_id,Trim leading/trailing whitespace,49
+1,clinic_id,Trim leading/trailing whitespace,37
+1,clinic_id,"Placeholder text (NA, null, ?, Unknown...) -> missing",17
+1,sex,Trim leading/trailing whitespace,64
+1,sex,"Placeholder text (NA, null, ?, Unknown...) -> missing",7
+1,bmi,"Placeholder text (NA, null, ?, Unknown...) -> missing",27
+1,systolic_bp,"Placeholder text (NA, null, ?, Unknown...) -> missing",16
+1,diastolic_bp,"Placeholder text (NA, null, ?, Unknown...) -> missing",24
+1,heart_rate,"Placeholder text (NA, null, ?, Unknown...) -> missing",19
+1,fasting_glucose,"Placeholder text (NA, null, ?, Unknown...) -> missing",36
+1,hba1c,"Placeholder text (NA, null, ?, Unknown...) -> missing",46
+1,total_cholesterol,"Placeholder text (NA, null, ?, Unknown...) -> missing",45
+1,smoking_status,"Placeholder text (NA, null, ?, Unknown...) -> missing",19
+1,exercise_days_per_week,"Placeholder text (NA, null, ?, Unknown...) -> missing",34
+1,family_history_flag,"Placeholder text (NA, null, ?, Unknown...) -> missing",21
+1,visits_last_year,"Placeholder text (NA, null, ?, Unknown...) -> missing",12
+1,risk_score,"Placeholder text (NA, null, ?, Unknown...) -> missing",11
+1,risk_group,Trim leading/trailing whitespace,55
+2,visit_date,Parse YYYY-MM-DD / YYYY/MM/DD / DD/MM/YYYY; impossible or future dates -> missing,9
+3,clinic_id,"Standardise to CLnn (upper case, no spaces)",110
+4,sex,Male/male/M -> Male ; Female/female/F -> Female,307
+4,smoking_status,Yes/Y/1 -> Smoker ; No/N/0 -> Non-Smoker,455
+4,family_history_flag,Yes/TRUE/Y/1 -> 1 ; No/FALSE/N/0 -> 0,389
+5,systolic_bp,Split '138/88' into systolic_bp=138 and diastolic_bp=88,98
+6,age,"Extract number from text (units, %, commas)",10
+6,bmi,"Extract number from text (units, %, commas)",163
+6,medication_adherence_pct,"Extract number from text (units, %, commas)",64
+6,risk_score,"Extract number from text (units, %, commas)",1
+6,fasting_glucose,Remove 'mg/dL'; convert mmol/L x 18.016,197
+6,hba1c,Remove '%' sign,370
+7,age,"Out of valid range [18, 100] (negative / impossible) -> missing",7
+7,bmi,"Out of valid range [12, 70] (negative / impossible) -> missing",5
+7,systolic_bp,"Out of valid range [70, 250] (negative / impossible) -> missing",5
+7,heart_rate,"Out of valid range [30, 220] (negative / impossible) -> missing",7
+7,fasting_glucose,"Out of valid range [40, 600] (negative / impossible) -> missing",5
+7,hba1c,"Out of valid range [3, 20] (negative / impossible) -> missing",3
+7,total_cholesterol,"Out of valid range [80, 500] (negative / impossible) -> missing",3
+7,exercise_days_per_week,"Out of valid range [0, 7] (negative / impossible) -> missing",6
+7,medication_adherence_pct,"Out of valid range [0, 100] (negative / impossible) -> missing",4
+7,visits_last_year,"Out of valid range [0, 60] (negative / impossible) -> missing",3
+7,risk_score,"Out of valid range [0, 100] (negative / impossible) -> missing",6
+7,follow_up_days,"Out of valid range [0, 365] (negative / impossible) -> missing",4
+9,risk_group,"Normalise labels (high/ HIGH /H -> High, Med -> Moderate ...)",166
+9,risk_group,Missing label derived from valid risk_score using documented thresholds,24
+10,*,Remove exact duplicate rows (after standardisation),36
+10,*,Remove repeated patient_id + visit_date (keep first),0
+11,*,Rows in clean analysis dataset,1200
