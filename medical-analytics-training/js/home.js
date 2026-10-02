@@ -14,8 +14,8 @@ function renderHome() {
     <div>
       <div class="eyebrow">${esc(BRAND.companyName)} · ${esc(BRAND.department)}</div>
       <h1 id="hero-title">${L("Medical analytics, explained step by step", "تحليلات البيانات الطبية، مشروحة خطوة بخطوة")}</h1>
-      <p class="lead">${L("Two interactive lectures that follow one realistic (made-up) patient-screening dataset — from a messy file to trustworthy insight, and from insight to dashboards, automation and AI assistance. Every step is explained in plain language and shown live; there is nothing to download.",
-        "محاضرتان تفاعليتان تتبعان مجموعة بيانات فحص مرضى واقعية (مُختلَقة) — من ملف غير منظم إلى رؤية موثوقة، ومن الرؤية إلى لوحات المؤشرات والأتمتة والمساعدة بالذكاء الاصطناعي. كل خطوة مشروحة بلغة بسيطة ومعروضة مباشرة؛ ولا شيء لتنزيله.")}</p>
+      <p class="lead">${L("Two interactive lectures that follow one realistic patient-screening training dataset — from a messy file to trustworthy insight, and from insight to dashboards, automation and AI assistance. Every step is explained in plain language and shown live; there is nothing to download.",
+        "محاضرتان تفاعليتان تتبعان مجموعة بيانات تدريبية واقعية لفحص المرضى — من ملف غير منظم إلى رؤية موثوقة، ومن الرؤية إلى لوحات المؤشرات والأتمتة والمساعدة بالذكاء الاصطناعي. كل خطوة مشروحة بلغة بسيطة ومعروضة مباشرة؛ ولا شيء لتنزيله.")}</p>
       <div class="row mt-3"><a class="btn btn-primary btn-lg" href="lecture-1.html">${L("Start Lecture 1", "ابدأ المحاضرة 1")} ${ICON.arrowR}</a><a class="btn btn-lg" href="lecture-2.html">${L("Go to Lecture 2", "انتقل إلى المحاضرة 2")}</a></div>
       <p class="small muted mt-2 mb-0">${L("Presenter", "المقدّم")}: ${esc(BRAND.presenterName)}</p>
     </div>

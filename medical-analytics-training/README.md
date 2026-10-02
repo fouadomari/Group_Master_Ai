@@ -8,7 +8,7 @@ Two interactive, bilingual (English / العربية) lectures that explain medi
 |---|---|
 | **Lecture 1** | *From Messy Medical Data to Statistical Insight, Machine Learning and Forecasting* — 20 sections |
 | **Lecture 2** | *From Statistical Insight to BI, Automation and AI Agents* — 12 sections |
-| **Data** | One realistic, fully synthetic patient-screening dataset (1,236 messy → 1,200 clean records) and 72 months of clinic activity. No real patients. |
+| **Data** | One realistic patient-screening training dataset (1,236 messy → 1,200 clean records) and 72 months of clinic activity. |
 
 ---
 
@@ -73,7 +73,7 @@ medical-analytics-training/
 └── tools/                build scripts (maintainers only)
 ```
 
-Learners only need the three HTML pages. The `data/`, `python/`, `sql/`, `notebooks/` and `exercises/` folders are the maintainers' source material: the Python scripts generate the synthetic data and every result shown on the site. They are not linked from the website.
+Learners only need the three HTML pages. The `data/`, `python/`, `sql/`, `notebooks/` and `exercises/` folders are the maintainers' source material: the Python scripts build the training data and every result shown on the site. They are not linked from the website.
 
 ---
 
@@ -119,8 +119,8 @@ pip install -r requirements.txt
 python tools/build_all.py
 ```
 
-This regenerates the synthetic data (fixed seed 42), runs every analysis script, and rewrites `js/site-data.js`, so the website always shows numbers produced by the scripts.
+This rebuilds the training data (fixed seed 42), runs every analysis script, and rewrites `js/site-data.js`, so the website always shows numbers produced by the scripts.
 
 ---
 
-© Master of AI — Al-Ahliyya Amman University. All synthetic data; no real patient information.
+© Master of AI — Al-Ahliyya Amman University. Realistic training data, prepared for teaching.

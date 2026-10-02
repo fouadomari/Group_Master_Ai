@@ -17,7 +17,7 @@ Test selection depends on assumptions:
   * Statistical significance != practical importance -> report effect sizes
     and confidence intervals.
 
-Synthetic educational data only. These are not clinical findings.
+Realistic training data. These are not clinical findings.
 """
 import numpy as np
 import pandas as pd

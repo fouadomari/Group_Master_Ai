@@ -9,7 +9,7 @@ Classification metrics : accuracy, precision, recall, F1 (per class + macro), co
 Regression metrics     : MAE, RMSE, R²   (R² is explained variance — NOT "accuracy")
 Robustness             : 5-fold cross-validated accuracy (mean ± sd)
 
-Educational synthetic target — not a clinically validated prediction.
+Teaching target — not a clinically validated prediction.
 """
 import joblib
 import numpy as np
@@ -63,7 +63,7 @@ if __name__ == "__main__":
                             "rmse": r(np.sqrt(mean_squared_error(ry_te, pred))),
                             "r2": r(r2_score(ry_te, pred))}
         sample[name] = {"actual": np.round(ry_te.values[:150], 1), "predicted": np.round(pred[:150], 1)}
-    print("\nRegression on synthetic risk_score:")
+    print("\nRegression on the teaching risk_score:")
     for k, v in regression.items():
         print(f"  {k:<34} MAE {v['mae']:.2f}  RMSE {v['rmse']:.2f}  R² {v['r2']:.3f}")
 

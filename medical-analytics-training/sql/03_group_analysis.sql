@@ -1,12 +1,12 @@
 -- =====================================================================
 -- 03_group_analysis.sql  —  GROUP BY, CASE, HAVING, JOIN, CTE (SQLite)
 -- Created by Master of AI.
--- Tables: patients, clinics. Synthetic educational data only.
+-- Tables: patients, clinics. Realistic training data.
 -- Group differences are DESCRIPTIVE; use statistical tests (Section 13)
 -- before claiming a difference is supported by evidence.
 -- =====================================================================
 
--- 1. Measurements by synthetic risk group
+-- 1. Measurements by teaching risk group
 SELECT risk_group,
        COUNT(*)                          AS patients,
        ROUND(AVG(age), 1)                AS mean_age,

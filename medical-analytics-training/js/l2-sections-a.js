@@ -2,7 +2,7 @@
    Lecture 2 — configuration, shared helpers + Sections 01–06
    Created by Master of AI.
    From Statistical Insight to BI, Automation and AI Agents
-   Everything is computed live from the same synthetic data used in
+   Everything is computed live from the same training data used in
    Lecture 1. Nothing to download or install.
    ===================================================================== */
 Lec.configure({
@@ -186,7 +186,7 @@ Lec.add({
       clinic: { name: "dim_clinic", cls: "", cols: ["clinic_key", "clinic_name", "region"], d: L("One row per clinic: names and regions, stored once.", "صف واحد لكل عيادة: الأسماء والمناطق، تُخزَّن مرة واحدة."), sample: () => Object.keys(CLINICS).map(k => [k, clinicName(k), LT(CLINICS[k].region)]) },
       date: { name: "dim_date", cls: "", cols: ["date_key", "date", "month", "quarter", "year"], d: L("One row per day, so you can group by month, quarter or year easily.", "صف واحد لكل يوم، فيمكنك التجميع حسب الشهر أو الربع أو السنة بسهولة."),
         sample: () => ["2024-01-15", "2024-04-02", "2024-08-20", "2024-12-31"].map(dt => [dt.replace(/-/g, ""), dt, MONTHS()[+dt.slice(5, 7) - 1], `Q${Math.ceil(+dt.slice(5, 7) / 3)}`, dt.slice(0, 4)]) },
-      patient: { name: "dim_patient", cls: "", cols: ["patient_key", "sex", "age_group", "smoking_status"], d: L("One row per patient with descriptive attributes (no names — synthetic IDs only).", "صف واحد لكل مريض مع صفات وصفية (بلا أسماء — معرّفات اصطناعية فقط)."), sample: () => rows.slice(0, 6).map(r => [r.patient_id, r.sex, r.age_group, r.smoking_status]) },
+      patient: { name: "dim_patient", cls: "", cols: ["patient_key", "sex", "age_group", "smoking_status"], d: L("One row per patient with descriptive attributes (no names — coded IDs only).", "صف واحد لكل مريض مع صفات وصفية (بلا أسماء — معرّفات مُرمَّزة فقط)."), sample: () => rows.slice(0, 6).map(r => [r.patient_id, r.sex, r.age_group, r.smoking_status]) },
     };
     const T = tables[st.tbl];
     setCode("l2-dim", Snip.dimTable(st.tbl));

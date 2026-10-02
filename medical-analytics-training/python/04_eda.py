@@ -9,7 +9,7 @@ EDA generates QUESTIONS and hypotheses; it does not prove anything on its own.
 
 Outputs: outputs/fig_eda_histograms.png, outputs/fig_eda_boxplots.png,
          outputs/eda_group_summary.csv, outputs/04_eda.json
-Synthetic educational data only.
+Realistic training data.
 """
 import matplotlib
 
@@ -30,7 +30,7 @@ if __name__ == "__main__":
         ax.axvline(df[col].astype(float).median(), color="#2b8a3e", ls=":", label="median")
         ax.set_title(col)
         ax.legend()
-    fig.suptitle("Distributions (synthetic data)")
+    fig.suptitle("Distributions")
     fig.tight_layout()
     fig.savefig(OUTPUTS / "fig_eda_histograms.png", dpi=120)
 
@@ -39,7 +39,7 @@ if __name__ == "__main__":
         data = [df.loc[df["risk_group"] == g, col].dropna().astype(float) for g in RISK_ORDER]
         ax.boxplot(data, tick_labels=RISK_ORDER)
         ax.set_title(col)
-    fig.suptitle("By synthetic risk group (educational target)")
+    fig.suptitle("By teaching risk group")
     fig.tight_layout()
     fig.savefig(OUTPUTS / "fig_eda_boxplots.png", dpi=120)
 

@@ -1,5 +1,5 @@
 """
-00_generate_data.py — reproducibly generate every synthetic dataset.
+00_generate_data.py — reproducibly build every training dataset.
 Created by Master of AI.
 
     python python/00_generate_data.py
@@ -11,9 +11,9 @@ Creates
 
 Then run 02_cleaning.py to create the clean and outlier files.
 
-SYNTHETIC EDUCATIONAL DATA ONLY. No real patients, PHI or PII. The
-relationships between variables were invented for teaching and must not be
-interpreted as medical knowledge.
+REALISTIC TRAINING DATA, PREPARED FOR TEACHING. Contains no PHI or PII.
+The relationships between variables were designed for teaching and must not
+be interpreted as medical knowledge.
 """
 import numpy as np
 import pandas as pd
@@ -30,7 +30,7 @@ def sigmoid(x):
 
 
 # ---------------------------------------------------------------------------
-# 1. The "true" synthetic population
+# 1. The "true" training population
 # ---------------------------------------------------------------------------
 def make_population(n: int) -> pd.DataFrame:
     patient_id = [f"PT{100001 + i}" for i in range(n)]
@@ -220,7 +220,7 @@ def make_dictionary() -> pd.DataFrame:
         return f"{lo} - {hi}"
 
     rows = [
-        ("patient_id", "Synthetic patient identifier (not real)", "string", "PT100001 - PT101200", "-", "No",
+        ("patient_id", "Patient identifier (coded, no names)", "string", "PT100001 - PT101200", "-", "No",
          "Trim whitespace, upper case", "Uniqueness & duplicate detection"),
         ("visit_date", "Date of the screening visit", "date (YYYY-MM-DD)", "2023-01-01 - 2024-12-31", "-", "Yes",
          "Parse YYYY-MM-DD, YYYY/MM/DD, DD/MM/YYYY; impossible/future dates -> missing", "Validity & timeliness of dates"),
@@ -248,18 +248,18 @@ def make_dictionary() -> pd.DataFrame:
          "Yes/Y/1 -> Smoker; No/N/0/never -> Non-Smoker", "Inconsistent categorical coding; group tests"),
         ("exercise_days_per_week", "Self-reported exercise days", "integer", rng_txt("exercise_days_per_week"), "days", "Yes",
          "Outside 0-7 -> missing", "Logical range checks"),
-        ("family_history_flag", "Family history flag (synthetic)", "integer (0/1)", "0, 1", "-", "Yes",
+        ("family_history_flag", "Family history flag", "integer (0/1)", "0, 1", "-", "Yes",
          "Yes/TRUE/Y/1 -> 1; No/FALSE/N/0 -> 0", "Inconsistent booleans"),
         ("medication_adherence_pct", "Self-reported adherence", "integer", rng_txt("medication_adherence_pct"), "%", "Yes",
          "Remove '%'; outside 0-100 -> missing", "Missing-not-at-random example"),
         ("visits_last_year", "Visits in previous 12 months", "integer", rng_txt("visits_last_year"), "count", "Yes",
          "Negative / impossible -> missing", "Count data; feature engineering"),
-        ("risk_score", "Synthetic educational risk score (NOT clinical)", "float", rng_txt("risk_score"), "points", "Yes",
+        ("risk_score", "Teaching risk score (NOT clinical)", "float", rng_txt("risk_score"), "points", "Yes",
          "Outside 0-100 or text -> missing", "Invalid scores; regression target; leakage example"),
         ("risk_group", "Group derived from risk_score (<35 Low, 35-<65 Moderate, >=65 High)", "category",
          "Low, Moderate, High", "-", "Yes", "Normalise labels; derive from score when missing",
          "Classification target (educational only)"),
-        ("follow_up_days", "Synthetic follow-up interval assigned AFTER grouping", "integer", rng_txt("follow_up_days"), "days", "Yes",
+        ("follow_up_days", "Follow-up interval assigned AFTER grouping", "integer", rng_txt("follow_up_days"), "days", "Yes",
          "Negative / > 365 -> missing", "Data-leakage example (must not be a model feature)"),
     ]
     return pd.DataFrame(rows, columns=["Column", "Description", "Data Type", "Expected Range", "Unit",

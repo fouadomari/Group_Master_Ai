@@ -2,7 +2,7 @@
 -- 04_dashboard_queries.sql  —  KPI & trend queries for an operations dashboard
 -- Created by Master of AI.
 -- Tables: patients, clinics, monthly_activity (SQLite ≥ 3.25 for window functions)
--- Synthetic educational data only — aggregate operational planning, not clinical use.
+-- Realistic training data — aggregate operational planning, not clinical use.
 -- =====================================================================
 
 -- 1. KPI tiles

@@ -9,7 +9,7 @@ run every query in sql/ to prove it executes.
 Tables
   patients_raw      messy file, every column TEXT (as delivered)
   patients          clean file, typed columns
-  clinics           small synthetic reference table (for JOIN examples)
+  clinics           small reference table (for JOIN examples)
   monthly_activity  aggregate monthly operational activity
 """
 import sqlite3

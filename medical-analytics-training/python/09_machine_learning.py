@@ -1,13 +1,13 @@
 """
-09_machine_learning.py — train educational models on the synthetic target.
+09_machine_learning.py — train educational models on the teaching target.
 Created by Master of AI.
 
     python python/09_machine_learning.py
 
-EDUCATIONAL SYNTHETIC TARGET — NOT A CLINICALLY VALIDATED PREDICTION.
+TEACHING TARGET — NOT A CLINICALLY VALIDATED PREDICTION.
 
   Features : MODEL_FEATURES in medlib (measurements, lifestyle, utilisation)
-  Target   : risk_group (Low / Moderate / High) — synthetic, rule-generated
+  Target   : risk_group (Low / Moderate / High) — teaching label from a simple rule
   Split    : 75% training / 25% testing, stratified, fixed random_state
   Models   : Logistic Regression, Random Forest, Gradient Boosting
              (+ Linear Regression for the numeric risk_score)
@@ -79,7 +79,7 @@ if __name__ == "__main__":
     importance = sorted(({"feature": f, "importance": r(v, 4)} for f, v in zip(MODEL_FEATURES, importances)),
                         key=lambda d: -d["importance"])
 
-    # Regression on the numeric synthetic score
+    # Regression on the numeric teaching score
     reg_df = feat[feat["risk_score"].notna()]
     rX, ry = reg_df[MODEL_FEATURES].astype(float), reg_df["risk_score"].astype(float)
     rX_tr, rX_te, ry_tr, ry_te = train_test_split(rX, ry, test_size=0.25, random_state=SEED)

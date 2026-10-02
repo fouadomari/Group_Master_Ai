@@ -2,7 +2,7 @@
 medlib.py — shared helpers for the Lecture 1 training scripts.
 Created by Master of AI.
 
-Synthetic educational data only. Nothing in this package is intended for
+Realistic training data. Nothing in this package is intended for
 diagnosis, treatment, triage, medication decisions or clinical decision-making.
 
 Every learner script (01_ ... 11_) imports from this module so that the
@@ -67,7 +67,7 @@ VALID_RANGES = {
 
 MISSING_TOKENS = {"", "na", "n/a", "nan", "null", "none", "?", "-", "missing", "not recorded", "unknown"}
 
-RISK_THRESHOLDS = (35, 65)  # Low < 35 <= Moderate < 65 <= High (synthetic rule)
+RISK_THRESHOLDS = (35, 65)  # Low < 35 <= Moderate < 65 <= High (teaching rule)
 RISK_ORDER = ["Low", "Moderate", "High"]
 
 

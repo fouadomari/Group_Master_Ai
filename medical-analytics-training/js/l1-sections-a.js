@@ -8,8 +8,8 @@ Lec.configure({
   subtitle: { en: "From messy data to insight", ar: "من البيانات غير المنظمة إلى الرؤية" },
   fullTitle: { en: "From Messy Medical Data to Statistical Insight, Machine Learning and Forecasting", ar: "من البيانات الطبية غير المنظمة إلى الرؤية الإحصائية وتعلّم الآلة والتنبؤ" },
   intro: {
-    en: "We follow one (made-up) patient-screening dataset from a messy file all the way to trustworthy numbers, simple predictions and a forecast. Every step is explained in plain language and shown live on the data — there is nothing to download or install.",
-    ar: "نتتبع مجموعة بيانات فحص مرضى (مُختلَقة) واحدة من ملف غير منظم حتى الوصول إلى أرقام موثوقة وتنبؤات بسيطة وتوقع مستقبلي. كل خطوة مشروحة بلغة بسيطة ومعروضة مباشرة على البيانات — لا شيء لتنزيله أو تثبيته.",
+    en: "We follow one realistic patient-screening training dataset from a messy file all the way to trustworthy numbers, simple predictions and a forecast. Every step is explained in plain language and shown live on the data — there is nothing to download or install.",
+    ar: "نتتبع مجموعة بيانات تدريبية واقعية واحدة لفحص المرضى من ملف غير منظم حتى الوصول إلى أرقام موثوقة وتنبؤات بسيطة وتوقع مستقبلي. كل خطوة مشروحة بلغة بسيطة ومعروضة مباشرة على البيانات — لا شيء لتنزيله أو تثبيته.",
   },
   groups: [
     { from: 1, to: 5, en: "The big picture", ar: "الصورة الكاملة" },
@@ -33,7 +33,7 @@ function facts() {
     fcTotal: fc.forecast.reduce((a, b) => a + b, 0), fcMape: fc.holdout[fc.best_method].mape, counts: d.eda.counts.risk_group,
   };
 }
-const RISK_NOTE = () => L("risk_group is a made-up teaching label calculated by a simple rule — it is not a real medical assessment.", "risk_group تسمية تعليمية مُختلَقة تُحسب بقاعدة بسيطة — وليست تقييمًا طبيًا حقيقيًا.");
+const RISK_NOTE = () => L("risk_group is a teaching label calculated by a simple rule — it is not a medical assessment.", "risk_group تسمية تعليمية تُحسب بقاعدة بسيطة — وليست تقييمًا طبيًا.");
 
 /* =====================================================================
    01 — The big picture
@@ -65,8 +65,8 @@ Lec.add({
         { t: L("Decide", "اتخاذ القرار"), d: L("Turn the evidence into actions, saying clearly how certain we are.", "تحويل الأدلة إلى إجراءات مع توضيح درجة اليقين."), ex: L("plan capacity · fix data entry at the source", "تخطيط السعة · إصلاح إدخال البيانات من المصدر") },
       ],
       seeTitle: L("Meet our dataset", "تعرّف على بياناتنا"),
-      seeNote: L("All patients are invented by a computer program — no real people. Here are six rows exactly as they arrived. Notice the different ways of writing the same thing.",
-        "جميع المرضى من اختلاق برنامج حاسوبي — لا أشخاص حقيقيون. هذه ستة صفوف كما وصلت تمامًا. لاحظ الطرق المختلفة لكتابة الشيء نفسه."),
+      seeNote: L("This is realistic training data. Here are six rows exactly as they arrived. Notice the different ways of writing the same thing.",
+        "هذه بيانات تدريبية واقعية. هذه ستة صفوف كما وصلت تمامًا. لاحظ الطرق المختلفة لكتابة الشيء نفسه."),
       see: `<div class="grid grid-4">${kpi(L("Raw rows", "الصفوف الخام"), fmtInt(f.rawRows), "", "warn", Snip.rawShape(`${fmtInt(f.rawRows)} × ${f.cols}`))}${kpi(L("Columns", "الأعمدة"), f.cols, "", "", Snip.rawShape(`${fmtInt(f.rawRows)} × ${f.cols}`))}${kpi(L("Clean rows", "الصفوف المنظّفة"), fmtInt(f.cleanRows), "", "accent", Snip.cleanRows(fmtInt(f.cleanRows)))}${kpi(L("Months of clinic activity", "أشهر نشاط العيادات"), SD().monthly.rows.length, "", "primary", Snip.monthsCount(SD().monthly.rows.length))}</div>
         <div class="mt-2">${withCode("s1-sample", Snip.rawSample([3, 11, 25, 40, 57, 88], cols), miniTable(cols.map(c => `<code>${c}</code>`), sample.map(r => cols.map(c => CleanRules.isMiss(r[c]) ? null : `<span class="mono">${esc(String(r[c]).replace(/ /g, "␠"))}</span>`))))}</div>
         <div class="mt-3">${datasetDownloads()}</div>`,

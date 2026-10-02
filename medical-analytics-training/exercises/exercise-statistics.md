@@ -2,7 +2,7 @@
 
 *Created by Master of AI.*
 
-> **Synthetic educational data only.** This training is not intended for diagnosis, treatment, triage, medication decisions, or clinical decision-making.
+> **Realistic training data, prepared for teaching.**
 
 **Lecture 1 sections:** 09 Descriptive Statistics · 10 Distribution & Variability · 11 EDA · 12 Correlation
 **Level:** Beginner · **Time:** ~45 minutes
@@ -84,4 +84,4 @@ for x in ["bmi", "hba1c"]:
 
 - **(2)** Both distributions are right-skewed (skewness > 0.5; mean > median). The **median** (with the IQR) is the better "typical" value; report the mean too, but explain the skew.
 - **(5)** Glucose has a long upper tail of extreme values. Pearson measures *linear* association and is pulled around by those points; Spearman works on ranks, so it captures the consistent *monotonic* tendency (higher BMI → higher glucose rank) more robustly.
-- **(6)** *"In this synthetic screening sample, patients with higher BMI tend to have higher fasting glucose (Spearman ρ ≈ 0.50). This is an association in observational data and does not show that BMI causes higher glucose."*
+- **(6)** *"In this screening sample, patients with higher BMI tend to have higher fasting glucose (Spearman ρ ≈ 0.50). This is an association in observational data and does not show that BMI causes higher glucose."*

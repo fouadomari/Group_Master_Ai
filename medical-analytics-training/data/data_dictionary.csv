@@ -1,5 +1,5 @@
 Column,Description,Data Type,Expected Range,Unit,Missing Allowed,Cleaning Rule,Educational Purpose
-patient_id,Synthetic patient identifier (not real),string,PT100001 - PT101200,-,No,"Trim whitespace, upper case",Uniqueness & duplicate detection
+patient_id,"Patient identifier (coded, no names)",string,PT100001 - PT101200,-,No,"Trim whitespace, upper case",Uniqueness & duplicate detection
 visit_date,Date of the screening visit,date (YYYY-MM-DD),2023-01-01 - 2024-12-31,-,Yes,"Parse YYYY-MM-DD, YYYY/MM/DD, DD/MM/YYYY; impossible/future dates -> missing",Validity & timeliness of dates
 clinic_id,Screening clinic code,category,CL01 - CL06,-,Yes,"Upper case, remove spaces, 'Clinic 1'/'CL-1' -> CL01",Consistency of codes; group comparisons
 age,Age at visit,integer,18 - 100,years,Yes,Extract number ('45 yrs'); outside 18-100 -> missing,Invalid values; age groups
@@ -13,9 +13,9 @@ hba1c,Glycated haemoglobin,float,3 - 20,%,Yes,Remove '%'; outside range -> missi
 total_cholesterol,Total cholesterol,integer,80 - 500,mg/dL,Yes,Outside range -> missing; plausible extremes kept & flagged,Outliers vs errors
 smoking_status,Smoking status,category,"Smoker, Non-Smoker",-,Yes,Yes/Y/1 -> Smoker; No/N/0/never -> Non-Smoker,Inconsistent categorical coding; group tests
 exercise_days_per_week,Self-reported exercise days,integer,0 - 7,days,Yes,Outside 0-7 -> missing,Logical range checks
-family_history_flag,Family history flag (synthetic),integer (0/1),"0, 1",-,Yes,Yes/TRUE/Y/1 -> 1; No/FALSE/N/0 -> 0,Inconsistent booleans
+family_history_flag,Family history flag,integer (0/1),"0, 1",-,Yes,Yes/TRUE/Y/1 -> 1; No/FALSE/N/0 -> 0,Inconsistent booleans
 medication_adherence_pct,Self-reported adherence,integer,0 - 100,%,Yes,Remove '%'; outside 0-100 -> missing,Missing-not-at-random example
 visits_last_year,Visits in previous 12 months,integer,0 - 60,count,Yes,Negative / impossible -> missing,Count data; feature engineering
-risk_score,Synthetic educational risk score (NOT clinical),float,0 - 100,points,Yes,Outside 0-100 or text -> missing,Invalid scores; regression target; leakage example
+risk_score,Teaching risk score (NOT clinical),float,0 - 100,points,Yes,Outside 0-100 or text -> missing,Invalid scores; regression target; leakage example
 risk_group,"Group derived from risk_score (<35 Low, 35-<65 Moderate, >=65 High)",category,"Low, Moderate, High",-,Yes,Normalise labels; derive from score when missing,Classification target (educational only)
-follow_up_days,Synthetic follow-up interval assigned AFTER grouping,integer,0 - 365,days,Yes,Negative / > 365 -> missing,Data-leakage example (must not be a model feature)
+follow_up_days,Follow-up interval assigned AFTER grouping,integer,0 - 365,days,Yes,Negative / > 365 -> missing,Data-leakage example (must not be a model feature)

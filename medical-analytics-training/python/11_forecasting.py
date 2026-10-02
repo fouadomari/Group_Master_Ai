@@ -16,7 +16,7 @@ Method
   5. Refit the chosen method on all history and forecast 12 months ahead
      with an approximate 95% interval (± 1.96 × hold-out RMSE).
 
-Synthetic educational data only.
+Realistic training data.
 """
 import warnings
 
@@ -101,7 +101,7 @@ if __name__ == "__main__":
             ax.plot(test.index, holdout[best]["pred"], label=f"hold-out: {best}", color="#d9480f")
             ax.plot(future_idx, future, label="forecast", color="#2b8a3e")
             ax.fill_between(future_idx, future - band, future + band, color="#2b8a3e", alpha=.15, label="≈95% interval")
-            ax.set_title("Monthly screening visits — synthetic aggregate data")
+            ax.set_title("Monthly screening visits — aggregate training data")
             ax.legend()
             fig.tight_layout()
             fig.savefig(OUTPUTS / "fig_forecast_screening.png", dpi=120)

@@ -2,7 +2,7 @@
 
 *Created by Master of AI.*
 
-> **Synthetic educational data only.** This training is not intended for diagnosis, treatment, triage, medication decisions, or clinical decision-making.
+> **Realistic training data, prepared for teaching.**
 
 **Lecture 1 sections:** 06 Data Quality · 07 Data Cleaning · 08 Missing Data
 **Level:** Beginner · **Time:** ~45 minutes

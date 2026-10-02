@@ -16,7 +16,7 @@ Cleaning principles used in this training
   4. Plausible extreme values are KEPT and flagged for review (outliers file).
   5. Every rule is logged with the number of rows it affected.
 
-Synthetic educational data only — not for clinical use.
+Realistic training data — not for clinical use.
 """
 import numpy as np
 import pandas as pd

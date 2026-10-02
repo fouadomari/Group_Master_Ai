@@ -3,7 +3,7 @@
    Created by Master of AI.
    SVG charts, code blocks, data explorer. Used by every page.
    No external libraries. Works from GitHub Pages and from file://.
-   Synthetic educational data only — not for clinical decision-making.
+   Realistic training data, prepared for teaching.
    ===================================================================== */
 
 /* ---------------------------------------------------------------------
@@ -249,7 +249,7 @@ const VARMETA = {
   exercise_days_per_week: { en: "Exercise days / week", ar: "أيام الرياضة أسبوعيًا", unit: "days", unitAr: "أيام" },
   medication_adherence_pct: { en: "Medication adherence", ar: "الالتزام بالدواء", unit: "%", unitAr: "%" },
   visits_last_year: { en: "Visits last year", ar: "الزيارات في العام الماضي", unit: "visits", unitAr: "زيارات" },
-  risk_score: { en: "Risk score (synthetic)", ar: "درجة الخطورة (اصطناعية)", unit: "points", unitAr: "نقطة" },
+  risk_score: { en: "Risk score (teaching)", ar: "درجة الخطورة (تعليمية)", unit: "points", unitAr: "نقطة" },
   follow_up_days: { en: "Follow-up days", ar: "أيام المتابعة", unit: "days", unitAr: "أيام" },
   family_history_flag: { en: "Family history", ar: "التاريخ العائلي", unit: "", unitAr: "" },
 };
@@ -1223,7 +1223,7 @@ function datasetDownloads(opts = {}) {
   if (!files.length) return "";
   return `<div class="card dataset-downloads">
     ${opts.title === false ? "" : `<h3 class="row" style="gap:10px">${ICON.download}<span>${L("Download the data", "تنزيل البيانات")}</span></h3>`}
-    <p class="small muted">${L("All files are synthetic (computer-generated) and open in Excel or any spreadsheet program.", "جميع الملفات اصطناعية (مولَّدة بالحاسوب) وتُفتح في Excel أو أي برنامج جداول بيانات.")}</p>
+    <p class="small muted">${L("All files contain realistic training data and open in Excel or any spreadsheet program.", "جميع الملفات تحتوي على بيانات تدريبية واقعية وتُفتح في Excel أو أي برنامج جداول بيانات.")}</p>
     <ul class="file-list">${files.map(f => `<li>
       <span style="flex:1;min-width:0"><span class="fname" style="display:block" title="${esc(f.path)}">${esc(f.name)}</span>
         <span class="small muted" style="display:block">${LT(DATASET_INFO[f.name] || { en: "" })}</span>

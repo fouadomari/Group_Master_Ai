@@ -3,7 +3,7 @@
 
    Created by Master of AI.
 
-   The agent answers questions about the platform's synthetic datasets in
+   The agent answers questions about the platform's training datasets in
    English or Arabic. It works in five steps for every question:
      1. Understand  — detect language, intent, measurement, groups, filters
      2. Guardrails  — refuse clinical advice and individual patient records
@@ -163,7 +163,7 @@ df = pd.read_csv("data/clean_patient_screening_data.csv")`;
   /* ---------- intent handlers: each returns { answer, table, code, steps, status } ---------- */
   const H = {
     help() {
-      return { status: "answered", answer: T("I am the platform's Data Agent. I answer questions about the synthetic screening data and the monthly clinic activity. For example:", "أنا وكيل البيانات الرسمي في المنصة. أجيب عن أسئلة حول بيانات الفحص الاصطناعية ونشاط العيادات الشهري. مثلًا:")
+      return { status: "answered", answer: T("I am the platform's Data Agent. I answer questions about the screening training data and the monthly clinic activity. For example:", "أنا وكيل البيانات الرسمي في المنصة. أجيب عن أسئلة حول بيانات الفحص التدريبية ونشاط العيادات الشهري. مثلًا:")
         + `<ul class="small">${examples().map(e => `<li>${esc(e)}</li>`).join("")}</ul>`, steps: [T("Recognised a request for help.", "تم التعرف على طلب مساعدة.")] };
     },
     refuse_clinical() {

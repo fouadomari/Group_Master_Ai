@@ -8,7 +8,7 @@ Created by Master of AI.
   Pearson r   : strength of LINEAR association (-1 .. +1), sensitive to outliers
   Spearman rho: strength of MONOTONIC association, based on ranks, more robust
 
-Correlation does NOT imply causation. Associations in this synthetic dataset
+Correlation does NOT imply causation. Associations in this training dataset
 were programmed into the generator — they are not medical findings.
 
 Outputs: outputs/correlation_pearson.csv, outputs/correlation_spearman.csv,
@@ -55,7 +55,7 @@ if __name__ == "__main__":
         for j in range(len(VARS)):
             ax.text(j, i, f"{pearson.iat[i, j]:.2f}", ha="center", va="center", fontsize=7)
     fig.colorbar(im)
-    ax.set_title("Pearson correlation (synthetic data)")
+    ax.set_title("Pearson correlation")
     fig.tight_layout()
     fig.savefig(OUTPUTS / "fig_correlation_heatmap.png", dpi=120)
 

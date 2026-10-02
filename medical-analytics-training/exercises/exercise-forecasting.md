@@ -2,7 +2,7 @@
 
 *Created by Master of AI.*
 
-> **Synthetic educational data only.** This training is not intended for diagnosis, treatment, triage, medication decisions, or clinical decision-making.
+> **Realistic training data, prepared for teaching.**
 >
 > We forecast **aggregate operational volumes** only — never individual patients or disease progression.
 
@@ -61,7 +61,7 @@ from statsmodels.tsa.seasonal import seasonal_decompose
 warnings.filterwarnings("ignore")
 ts = pd.read_csv("data/monthly_clinic_activity.csv", parse_dates=["month"]).set_index("month")
 y = ts["lab_requests"].astype(float)
-y.plot(title="Monthly lab requests (synthetic)"); plt.show()
+y.plot(title="Monthly lab requests"); plt.show()
 
 # 2. decomposition
 dec = seasonal_decompose(y, model="additive", period=12)

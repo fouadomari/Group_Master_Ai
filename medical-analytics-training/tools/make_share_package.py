@@ -42,7 +42,7 @@ lecture-1.html      Lecture 1 (20 sections)
 lecture-2.html      Lecture 2 (12 sections)
 agent-report.html   How the Data Agent works (official report)
 
-All data is synthetic. No real patient information.
+All files contain realistic training data, prepared for teaching.
 """
 
 

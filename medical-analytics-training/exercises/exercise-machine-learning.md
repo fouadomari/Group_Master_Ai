@@ -2,9 +2,9 @@
 
 *Created by Master of AI.*
 
-> **Synthetic educational data only.** This training is not intended for diagnosis, treatment, triage, medication decisions, or clinical decision-making.
+> **Realistic training data, prepared for teaching.**
 >
-> **Educational synthetic target — not a clinically validated prediction.**
+> **Teaching target — not a clinically validated prediction.**
 
 **Lecture 1 sections:** 16 Feature Engineering · 17 Machine Learning · 18 Model Evaluation
 **Level:** Intermediate · **Time:** ~60 minutes
@@ -15,7 +15,7 @@ Build a leakage-free modelling dataset, train and compare classifiers on a strat
 
 ## Dataset
 
-`data/clean_patient_screening_data.csv` — target: `risk_group` (Low / Moderate / High), a **synthetic, rule-generated** label.
+`data/clean_patient_screening_data.csv` — target: `risk_group` (Low / Moderate / High), a **teaching label from a simple rule**.
 
 ## Tasks
 
@@ -101,7 +101,7 @@ a, b, c, d = train_test_split(Xl, y, test_size=0.25, stratify=y, random_state=42
 leaky = make_pipeline(SimpleImputer(strategy="median"), RandomForestClassifier(n_estimators=300, random_state=42, n_jobs=-1))
 print("test accuracy WITH leakage:", round(leaky.fit(a, c).score(b, d), 3))
 
-# 7. bonus: regression on the numeric synthetic score
+# 7. bonus: regression on the numeric teaching score
 reg = df[df["risk_score"].notna()]
 rX_tr, rX_te, ry_tr, ry_te = train_test_split(reg[features].astype(float), reg["risk_score"], test_size=0.25, random_state=42)
 lin = make_pipeline(SimpleImputer(strategy="median"), LinearRegression()).fit(rX_tr, ry_tr)

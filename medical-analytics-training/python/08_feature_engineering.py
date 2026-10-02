@@ -13,7 +13,7 @@ used here are for teaching; a feature does not automatically have clinical
 validity, and binning always discards information.
 
 Outputs: outputs/features_dataset.csv, outputs/08_feature_engineering.json
-Synthetic educational data only.
+Realistic training data.
 """
 from medlib import OUTPUTS, add_features, load_clean, r, save_results
 

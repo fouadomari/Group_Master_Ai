@@ -2,7 +2,7 @@
 
 *Created by Master of AI.*
 
-> **Synthetic educational data only.** This training is not intended for diagnosis, treatment, triage, medication decisions, or clinical decision-making.
+> **Realistic training data, prepared for teaching.**
 
 **Lecture 1 sections:** 13 Hypothesis Testing · 14 Confidence Intervals
 **Level:** Intermediate · **Time:** ~40 minutes
@@ -17,7 +17,7 @@ Choose an appropriate test from the data's characteristics, run it with SciPy, r
 
 ## Tasks
 
-1. State H₀ and H₁ for: *"Does mean resting heart rate differ between synthetic smokers and non-smokers?"* Fix α = 0.05 **before** looking at the data.
+1. State H₀ and H₁ for: *"Does mean resting heart rate differ between smokers and non-smokers?"* Fix α = 0.05 **before** looking at the data.
 2. Check assumptions: group sizes, skewness of each group, and Levene's test for equal variances. Which test do you choose?
 3. Run **Welch's t-test** (`ttest_ind(..., equal_var=False)`). Report t, p, the mean difference with its 95% CI, and Hedges' g.
 4. Repeat steps 2–3 for `fasting_glucose`, and also run the **Mann–Whitney U** test. Why might the two tests disagree?
@@ -91,6 +91,6 @@ print(f"HbA1c mean {h.mean():.3f}, 95% CI [{h.mean() - t_crit * se:.3f}, {h.mean
 
 - **(2)** Heart rate is roughly symmetric, groups are large and independent, variances similar → a t-test is appropriate; Welch's version is the safe default.
 - **(4)** The tests ask different questions. Welch compares **means**; glucose has extreme values (skewness ≈ 6) that make the mean noisy, so the mean difference is not distinguishable from chance. Mann–Whitney compares the overall **ranking** of values and detects a small but consistent shift (medians 92 vs 95). Decide which question matters *before* testing, and report the effect size — here it is negligible either way.
-- **(5)** Smoking status and the synthetic risk group are associated (the generator adds smoking to the risk score); the strength is modest (V = 0.25). This is association, not causation.
+- **(5)** Smoking status and the teaching risk group are associated (the risk rule includes smoking); the strength is modest (V = 0.25). This is association, not causation.
 - **(6)** *"If we repeated this sampling many times, about 95% of intervals constructed this way would contain the true mean HbA1c."*
 - **(7)** (a) and (b) are wrong. A p-value is computed **assuming** H₀ is true, so it cannot be the probability that H₀ is true; failing to reject H₀ means insufficient evidence, not proof of equality. (c) is the correct frequentist interpretation.

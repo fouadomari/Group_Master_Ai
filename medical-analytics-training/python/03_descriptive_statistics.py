@@ -11,7 +11,7 @@ Conventions (the website uses exactly the same ones):
   * missing values are excluded; n is reported for every variable
 
 Outputs: outputs/descriptive_statistics.csv, outputs/03_descriptive_statistics.json
-Synthetic educational data only.
+Realistic training data.
 """
 import pandas as pd
 
@@ -49,5 +49,5 @@ if __name__ == "__main__":
 
     pd.set_option("display.width", 200)
     print(table[["n", "mean", "median", "std", "min", "q1", "q3", "max", "iqr", "skewness"]].to_string())
-    print("\nMean fasting glucose by synthetic risk group:")
+    print("\nMean fasting glucose by teaching risk group:")
     print(df.groupby("risk_group", observed=True)["fasting_glucose"].agg(["count", "mean", "median", "std"]).round(2))

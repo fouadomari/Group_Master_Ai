@@ -15,7 +15,7 @@ Measures the six data-quality dimensions used in the lecture:
 Outputs: outputs/data_quality_report.csv, outputs/01_data_quality.json,
          outputs/fig_missing_by_column.png
 
-Synthetic educational data only.
+Realistic training data.
 """
 import matplotlib
 
@@ -55,7 +55,7 @@ if __name__ == "__main__":
     rep = report.sort_values("missing_pct")
     ax.barh(rep["column"], rep["missing_pct"], color="#2f6fde")
     ax.set_xlabel("Missing (%) — includes placeholder text")
-    ax.set_title("Completeness by column (raw synthetic extract)")
+    ax.set_title("Completeness by column (raw extract)")
     fig.tight_layout()
     fig.savefig(OUTPUTS / "fig_missing_by_column.png", dpi=120)
 

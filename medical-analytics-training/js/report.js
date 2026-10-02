@@ -60,7 +60,7 @@ function renderReport() {
     <div class="card mt-3">${miniTable([L("Item", "البند"), L("Details", "التفاصيل")], [
       [L("Prepared by", "إعداد"), `<strong>${esc(BRAND.createdBy)}</strong>`], [L("Institution", "المؤسسة"), esc(BRAND.department)],
       [L("System", "النظام"), L("Data Agent — the official “Ask the data” chatbot of the Medical Analytics Training platform", "وكيل البيانات — روبوت المحادثة الرسمي «اسأل البيانات» في منصة تدريب تحليلات البيانات الطبية")],
-      [L("Date", "التاريخ"), REPORT_META.date], [L("Data", "البيانات"), L("Synthetic (computer-generated) teaching data — no real patients", "بيانات تعليمية اصطناعية (مولَّدة بالحاسوب) — بلا مرضى حقيقيين")]])}</div>
+      [L("Date", "التاريخ"), REPORT_META.date], [L("Data", "البيانات"), L("Realistic training data, prepared for teaching", "بيانات تدريبية واقعية مُعدّة للتعليم")]])}</div>
 
     <section class="block"><h2>1. ${L("Executive summary", "الملخص التنفيذي")}</h2><div class="card"><ul class="mb-0">
       <li>${L("The Data Agent is the platform's official chatbot for asking questions about the data in plain English or Arabic. It is available on every page through the <strong>“Ask the data”</strong> button.", "وكيل البيانات هو روبوت المحادثة الرسمي في المنصة لطرح الأسئلة عن البيانات بالعربية أو الإنجليزية البسيطة. وهو متاح في كل صفحة عبر زر <strong>«اسأل البيانات»</strong>.")}</li>
@@ -108,7 +108,7 @@ function renderReport() {
     <section class="block"><h2>8. ${L("Limitations", "القيود")}</h2><div class="card"><ul class="mb-0">
       <li>${L("Understanding is rule-based: the agent recognises the measurements, groups and question types listed in Section 2. Unusual wording may not be understood — it then says so instead of guessing.", "الفهم قائم على القواعد: يتعرف الوكيل على القياسات والمجموعات وأنواع الأسئلة المذكورة في القسم 2. وقد لا يُفهم الأسلوب غير المعتاد — فيقول ذلك بدل التخمين.")}</li>
       <li>${L("One measurement per question (two for relationships); one comparison dimension at a time.", "قياس واحد لكل سؤال (اثنان للعلاقات)؛ وبُعد مقارنة واحد في كل مرة.")}</li>
-      <li>${L("It answers from the platform's synthetic teaching data only; results describe that data, not real populations.", "يجيب من بيانات المنصة التعليمية الاصطناعية فقط؛ والنتائج تصف تلك البيانات لا سكانًا حقيقيين.")}</li>
+      <li>${L("It answers from the platform's training data only; results describe that data, not wider populations.", "يجيب من بيانات المنصة التدريبية فقط؛ والنتائج تصف تلك البيانات لا مجتمعات أوسع.")}</li>
       <li>${L("“risk_group” is a teaching label created by a simple rule, not a clinical assessment.", "«risk_group» تسمية تعليمية أُنشئت بقاعدة بسيطة، وليست تقييمًا سريريًا.")}</li></ul></div></section>
 
     <section class="block"><h2>9. ${L("Activity log (this browser session)", "سجل النشاط (جلسة هذا المتصفح)")}</h2><div id="audit"></div></section>

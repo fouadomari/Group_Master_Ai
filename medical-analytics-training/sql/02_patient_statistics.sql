@@ -1,7 +1,7 @@
 -- =====================================================================
 -- 02_patient_statistics.sql  —  descriptive statistics in SQL (SQLite)
 -- Created by Master of AI.
--- Table: patients (clean, typed). Synthetic educational data only.
+-- Table: patients (clean, typed). Realistic training data.
 -- NULLs are ignored by AVG / MIN / MAX / COUNT(column).
 -- =====================================================================
 

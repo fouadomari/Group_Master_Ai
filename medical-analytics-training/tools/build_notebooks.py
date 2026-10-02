@@ -14,8 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 NB_DIR = ROOT / "notebooks"
 NB_DIR.mkdir(exist_ok=True)
 
-DISCLAIMER = ("> **Synthetic educational data only.** This training is not intended for diagnosis, treatment, "
-              "triage, medication decisions, or clinical decision-making.")
+DISCLAIMER = "> **Realistic training data, prepared for teaching.**"
 
 SETUP = """import numpy as np
 import pandas as pd
@@ -100,11 +99,11 @@ NOTEBOOKS = {
         ("code", 'num.corr(method="spearman").round(2)'),
         ("code", "import matplotlib.pyplot as plt\n"
                  'ax = df.plot.scatter(x="bmi", y="fasting_glucose", alpha=.35, figsize=(6, 4))\n'
-                 'ax.set_title("BMI vs fasting glucose (synthetic)"); plt.show()'),
+                 'ax.set_title("BMI vs fasting glucose"); plt.show()'),
     ]),
     "03_hypothesis_testing.ipynb": nb("03 · Hypothesis Testing & Confidence Intervals", [
         ("code", SETUP + "from scipy import stats\nfrom scipy.stats import ttest_ind\n" + LOAD_CLEAN),
-        ("md", "## 1. Question\nIs mean fasting glucose different between synthetic smokers and non-smokers?\n\n"
+        ("md", "## 1. Question\nIs mean fasting glucose different between smokers and non-smokers?\n\n"
                "- H0: μ(smoker) = μ(non-smoker)\n- H1: μ(smoker) ≠ μ(non-smoker)\n- α = 0.05"),
         ("code", 'group_a = df.loc[df["smoking_status"] == "Non-Smoker", "fasting_glucose"].dropna()\n'
                  'group_b = df.loc[df["smoking_status"] == "Smoker", "fasting_glucose"].dropna()\n'
@@ -140,7 +139,7 @@ NOTEBOOKS = {
                  'print("coverage %:", hits / 10)'),
     ]),
     "04_machine_learning.ipynb": nb("04 · Feature Engineering, Machine Learning & Evaluation", [
-        ("md", "> **Educational synthetic target — not a clinically validated prediction.**"),
+        ("md", "> **Teaching target — not a clinically validated prediction.**"),
         ("code", SETUP + LOAD_CLEAN),
         ("md", "## 1. Feature engineering"),
         ("code", 'df["is_smoker"] = (df["smoking_status"] == "Smoker").astype(int)\n'
@@ -194,7 +193,7 @@ NOTEBOOKS = {
         ("md", "We forecast **aggregate operational volumes** for planning — never individual disease progression."),
         ("code", SETUP + 'ts = pd.read_csv(DATA + "monthly_clinic_activity.csv", parse_dates=["month"]).set_index("month")\n'
                  "ts.tail()"),
-        ("code", "import matplotlib.pyplot as plt\nts.plot(figsize=(10, 4), title='Monthly activity (synthetic)'); plt.show()"),
+        ("code", "import matplotlib.pyplot as plt\nts.plot(figsize=(10, 4), title='Monthly activity'); plt.show()"),
         ("md", "## 1. Decomposition: trend + seasonality + remainder"),
         ("code", "from statsmodels.tsa.seasonal import seasonal_decompose\n"
                  'dec = seasonal_decompose(ts["screening_visits"], model="additive", period=12)\n'

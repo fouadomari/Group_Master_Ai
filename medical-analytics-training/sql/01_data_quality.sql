@@ -1,7 +1,7 @@
 -- =====================================================================
 -- 01_data_quality.sql  —  profile the RAW extract (SQLite)
 -- Created by Master of AI.
--- Lecture 1 · Synthetic educational data only — not for clinical use.
+-- Lecture 1 · Realistic training data — not for clinical use.
 --
 -- Setup (either option):
 --   python tools/build_sqlite.py          -> outputs/medical_training.db

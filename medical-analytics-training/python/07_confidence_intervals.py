@@ -11,7 +11,7 @@ Correct (frequentist) interpretation of a 95% confidence interval:
   we do NOT say "there is a 95% probability the true value is in this interval".
 
 Also shown: a simulation of coverage and a bootstrap CI for the median.
-Synthetic educational data only.
+Realistic training data.
 """
 import numpy as np
 import pandas as pd
