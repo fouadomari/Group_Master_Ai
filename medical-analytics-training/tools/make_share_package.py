@@ -19,7 +19,7 @@ OUT = ROOT / "share"
 NAME = "medical-analytics-training"
 
 WEBSITE = ["index.html", "lecture-1.html", "lecture-2.html", "agent-report.html",
-           "css/*.css", "js/*.js", "assets/*.png", "data/*.csv"]
+           "css/*.css", "js/*.js", "assets/*.png", "data/*.csv", "notebooks/06_store_sales_analysis.ipynb"]
 
 SKIP_DIRS = {"share", "__pycache__", ".ipynb_checkpoints", ".git", "models"}
 SKIP_SUFFIX = {".pyc", ".db"}
@@ -39,7 +39,7 @@ Nothing needs to be installed and no internet connection is required
 PAGES
 index.html          Home - choose a lecture, download the data
 lecture-1.html      Lecture 1 (20 sections)
-lecture-2.html      Lecture 2 (12 sections)
+lecture-2.html      Lecture 2 - Data Analysis with Python (15 sections)
 agent-report.html   How the Data Agent works (official report)
 
 All files contain realistic training data, prepared for teaching.
@@ -70,4 +70,6 @@ def write_zip(path, files, extra=None):
 if __name__ == "__main__":
     OUT.mkdir(exist_ok=True)
     write_zip(OUT / f"{NAME}-website.zip", website_files(), {"OPEN-ME.txt": OPEN_ME})
-    write_zip(OUT / f"{NAME}-full-project.zip", project_files(), {"OPEN-ME.txt": OPEN_ME})
+    # README and requirements live at the repository root, one level up
+    extra = {f.name: f.read_text(encoding="utf-8") for f in (ROOT.parent / "README.md", ROOT.parent / "requirements.txt") if f.exists()}
+    write_zip(OUT / f"{NAME}-full-project.zip", project_files(), {"OPEN-ME.txt": OPEN_ME, **extra})

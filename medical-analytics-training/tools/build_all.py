@@ -18,7 +18,7 @@ STEPS = [
     "python/06_hypothesis_testing.py", "python/07_confidence_intervals.py",
     "python/08_feature_engineering.py", "python/09_machine_learning.py",
     "python/10_model_evaluation.py", "python/11_forecasting.py",
-    "tools/build_sqlite.py", "tools/build_notebooks.py", "tools/make_logo_png.py",
+    "tools/build_sqlite.py", "tools/build_notebooks.py", "tools/build_store_sales_notebook.py", "tools/make_logo_png.py",
     "tools/build_site_data.py",
 ]
 

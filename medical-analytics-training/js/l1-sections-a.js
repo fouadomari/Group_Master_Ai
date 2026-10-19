@@ -8,8 +8,8 @@ Lec.configure({
   subtitle: { en: "From messy data to insight", ar: "من البيانات غير المنظمة إلى الرؤية" },
   fullTitle: { en: "From Messy Medical Data to Statistical Insight, Machine Learning and Forecasting", ar: "من البيانات الطبية غير المنظمة إلى الرؤية الإحصائية وتعلّم الآلة والتنبؤ" },
   intro: {
-    en: "We follow one realistic patient-screening training dataset from a messy file all the way to trustworthy numbers, simple predictions and a forecast. Every step is explained in plain language and shown live on the data — there is nothing to download or install.",
-    ar: "نتتبع مجموعة بيانات تدريبية واقعية واحدة لفحص المرضى من ملف غير منظم حتى الوصول إلى أرقام موثوقة وتنبؤات بسيطة وتوقع مستقبلي. كل خطوة مشروحة بلغة بسيطة ومعروضة مباشرة على البيانات — لا شيء لتنزيله أو تثبيته.",
+    en: "We follow one realistic patient-screening training dataset from a messy file all the way to trustworthy numbers, simple predictions and a forecast. Every step is explained in plain language and shown live on the data — there is nothing to install.",
+    ar: "نتتبع مجموعة بيانات تدريبية واقعية واحدة لفحص المرضى من ملف غير منظم حتى الوصول إلى أرقام موثوقة وتنبؤات بسيطة وتوقع مستقبلي. كل خطوة مشروحة بلغة بسيطة ومعروضة مباشرة على البيانات — دون الحاجة إلى تثبيت أي شيء.",
   },
   groups: [
     { from: 1, to: 5, en: "The big picture", ar: "الصورة الكاملة" },

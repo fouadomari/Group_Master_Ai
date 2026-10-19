@@ -7,7 +7,7 @@ Two interactive, bilingual (English / العربية) lectures that explain medi
 | | |
 |---|---|
 | **Lecture 1** | *From Messy Medical Data to Statistical Insight, Machine Learning and Forecasting* — 20 sections |
-| **Lecture 2** | *From Statistical Insight to BI, Automation and AI Agents* — 12 sections |
+| **Lecture 2** | *Data Analysis with Python — From Raw Data to Business Insights* (Kaggle Store Sales data) — 15 sections |
 | **Data** | One realistic patient-screening training dataset (1,236 messy → 1,200 clean records) and 72 months of clinic activity. |
 
 ---
@@ -27,10 +27,14 @@ Every section in both lectures follows the same simple layout:
 ### Lecture 1 — sections
 The big picture · Five fields explained (analysis, statistics, data science, ML, AI) · How AI/ML/data science fit together · Asking the right questions · Our tools (Python) · Checking data quality · Cleaning the data · Handling missing data · Descriptive statistics · Shape and spread · Exploring the data · Correlation · Hypothesis testing · Confidence intervals · The processing pipeline · Feature engineering · Machine learning · Model evaluation · Forecasting · The full journey
 
-### Lecture 2 — sections
-From insight to action · What is BI? · Choosing good KPIs · Organising data (star schema) · Asking questions with SQL · Building a dashboard · Automating the pipeline · Watching data quality over time · Reports that write themselves · AI assistants (LLMs) · AI agents: plan, act, check · Guardrails, privacy and governance
+### Lecture 2 — Data Analysis with Python (15 sections)
+Introduction to data analysis · The Kaggle Store Sales dataset (and loading your copies) · Python setup and loading · Data exploration · Data quality and cleaning · Merging the two files · The four join types · Feature engineering · GroupBy and aggregation · Time-series analysis · Statistics and outliers · Visualisation · Cities and store types · Business insights · Limitations and conclusion
 
-> The AI assistant and agent demonstrations in Lecture 2 are **simulations**: no AI model is called. Their steps and answers are built from the real data to show how a grounded, well-governed assistant works.
+- Data: `train.csv` and `stores.csv` from https://www.kaggle.com/competitions/store-sales-time-series-forecasting/data (not included — download them from Kaggle; the competition rules must be accepted first).
+- The Python code runs in Google Colab. `notebooks/06_store_sales_analysis.ipynb` contains all of it in order; it is built from `js/store-sales-code.js` by `python tools/build_store_sales_notebook.py`, so the page and the notebook always show the same code.
+- **Results on the page:** in Section 2 the viewer chooses their copies of the two files. `js/store-sales.js` reads them **in the browser** (nothing is uploaded), computes the same results as the Python code (shape, info, describe, missing values, duplicates, merge checks, the four joins, group-bys, monthly/yearly totals, statistics, IQR outliers, charts) and keeps a small summary in the browser so every section can show it. Without files, sections say clearly where the results will appear; no results are invented.
+- The JavaScript results were checked against pandas on test files with the same structure: all values matched. Reading a file of 3,000,888 rows takes about 9 seconds in a desktop browser.
+
 
 ---
 
@@ -63,7 +67,9 @@ medical-analytics-training/
 │   ├── shared.js         BRAND config, language, theme, navigation, statistics, charts, data explorer
 │   ├── lecture.js        lecture engine (router, sidebar, progress, simple lesson layout)
 │   ├── l1-sections-a/b/c.js   Lecture 1 content
-│   ├── l2-sections-a/b.js     Lecture 2 content
+│   ├── l2-python-a/b.js       Lecture 2: Data Analysis with Python (15 sections)
+│   ├── store-sales.js    in-browser analysis of the Kaggle Store Sales files
+│   ├── store-sales-code.js    the Python code of Lecture 2 (also builds notebook 06)
 │   ├── home.js           home page
 │   ├── agent.js          Data Agent (chatbot) engine and chat panel
 │   ├── report.js         official agent report page
@@ -73,13 +79,13 @@ medical-analytics-training/
 └── tools/                build scripts (maintainers only)
 ```
 
-Learners only need the three HTML pages. The `data/`, `python/`, `sql/`, `notebooks/` and `exercises/` folders are the maintainers' source material: the Python scripts build the training data and every result shown on the site. They are not linked from the website.
+Learners only need the four HTML pages. The `data/`, `python/`, `sql/`, `notebooks/` and `exercises/` folders are the maintainers' source material: the Python scripts build the training data and every result shown on the site. They are not linked from the website.
 
 ---
 
 ## Open the website
 
-Double-click `index.html`, or serve the folder and open it in a browser:
+Double-click `medical-analytics-training/index.html`, or serve the folder and open it in a browser:
 
 ```bash
 python -m http.server 8000
@@ -100,7 +106,7 @@ To give everyone a single link instead, publish the website zip's contents on Gi
 
 ### Deploy to GitHub Pages
 
-1. Push the contents of `medical-analytics-training/` to a repository (with `index.html` at the root).
+1. Push this repository to GitHub. The `index.html` at the repository root forwards visitors to `medical-analytics-training/index.html`.
 2. **Settings → Pages → Deploy from a branch → `main` / `(root)`**.
 3. The site appears at `https://<user>.github.io/<repo>/`.
 
@@ -116,6 +122,7 @@ Edit the `BRAND` object at the top of `js/shared.js` (`createdBy`, `companyName`
 
 ```bash
 pip install -r requirements.txt
+cd medical-analytics-training
 python tools/build_all.py
 ```
 

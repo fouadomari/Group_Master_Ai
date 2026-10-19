@@ -513,7 +513,7 @@ const Charts = (() => {
     return [Math.floor(min / step) * step, Math.ceil(max / step) * step];
   }
   const scale = (d0, d1, r0, r1) => v => r0 + ((v - d0) / (d1 - d0 || 1)) * (r1 - r0);
-  const tickFmt = v => Math.abs(v) >= 10000 ? (v / 1000).toFixed(0) + "k" : Math.abs(v) >= 100 || Number.isInteger(v) ? String(Math.round(v * 100) / 100) : v.toFixed(Math.abs(v) < 1 ? 2 : 1);
+  const tickFmt = v => Math.abs(v) >= 1e9 ? +(v / 1e9).toFixed(2) + "B" : Math.abs(v) >= 1e6 ? +(v / 1e6).toFixed(1) + "M" : Math.abs(v) >= 10000 ? (v / 1000).toFixed(0) + "k" : Math.abs(v) >= 100 || Number.isInteger(v) ? String(Math.round(v * 100) / 100) : v.toFixed(Math.abs(v) < 1 ? 2 : 1);
   const tip = s => ` data-tip="${esc(s)}"`;
 
   function frame(w, h, m, inner, label) {
@@ -1148,7 +1148,7 @@ const Shell = (() => {
           <p>${t("footer.about")}</p></div>
         <div><h4>${t("footer.learn")}</h4><ul>
           ${page === "home" ? "" : `<li><a href="lecture-1.html">${t("nav.l1")} — ${L("From messy data to insight", "من البيانات غير المنظمة إلى الرؤية")}</a></li>
-          <li><a href="lecture-2.html">${t("nav.l2")} — ${L("From insight to BI, automation & AI", "من الرؤية إلى ذكاء الأعمال والأتمتة والذكاء الاصطناعي")}</a></li>`}
+          <li><a href="lecture-2.html">${t("nav.l2")} — ${L("Data analysis with Python", "تحليل البيانات باستخدام بايثون")}</a></li>`}
           <li><a href="index.html#data">${L("Download the data", "تنزيل البيانات")}</a></li>
           <li><a href="agent-report.html">${L("Data Agent — official report", "وكيل البيانات — التقرير الرسمي")}</a></li></ul></div>
       </div>

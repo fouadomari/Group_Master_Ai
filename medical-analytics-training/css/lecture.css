@@ -106,7 +106,7 @@ html[lang="ar"] .sidebar-group { letter-spacing: 0; }
 
 /* ---------- Pipeline / flows ---------- */
 .pipeline { display: flex; align-items: stretch; gap: 0; overflow-x: auto; padding: 4px 2px 10px; scrollbar-width: thin; }
-.pipeline .flow-step { flex: 1 0 118px; min-width: 118px; }
+.pipeline .flow-step { flex: 1 0 100px; min-width: 100px; padding-inline: 10px; }
 .pipeline .flow-arrow { flex: 0 0 22px; display: grid; place-items: center; }
 .pipeline .flow-arrow svg { width: 18px; height: 18px; }
 .stage-dot { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; background: var(--surface-2); color: var(--primary); margin-bottom: 4px; }
@@ -345,4 +345,63 @@ html[dir="rtl"] .code-result { direction: rtl; text-align: right; }
   .step::before { inset-inline-start: 15px; top: 32px; }
   .remember { flex-direction: column; align-items: flex-start; gap: 6px; }
   .report-paper { padding: 16px; }
+}
+
+/* ---------- Lecture 2 · Part 2: Data Analysis with Python ---------- */
+.py-part { border-color: var(--primary); background: linear-gradient(135deg, var(--primary-soft), var(--accent-soft)); }
+.py-concept { display: grid; gap: 12px; margin-bottom: 18px; }
+.py-concept .py-title { margin: 0; font-size: 1.12rem; }
+.py-facts { display: grid; gap: 8px; margin: 0; }
+.py-facts > div { display: grid; grid-template-columns: minmax(130px, 170px) minmax(0, 1fr); gap: 12px; align-items: start; }
+.py-facts dt { font-size: .8rem; font-weight: 700; color: var(--text-muted); padding-top: 2px; }
+.py-facts dd { margin: 0; min-width: 0; }
+.py-more { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); }
+.py-more > summary { cursor: pointer; padding: 10px 14px; font-weight: 700; font-size: .92rem; list-style: none; display: flex; align-items: center; gap: 8px; }
+.py-more > summary::-webkit-details-marker { display: none; }
+.py-more > summary::before { content: "+"; display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; background: var(--primary-soft); color: var(--primary); font-weight: 800; flex-shrink: 0; }
+.py-more[open] > summary::before { content: "−"; }
+.py-more > summary:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: var(--radius-sm); }
+.py-more-body { padding: 0 14px 14px; min-width: 0; }
+.py-more-body > :last-child { margin-bottom: 0; }
+.py-lines td:first-child { direction: ltr; text-align: left; width: 42%; }
+.py-lines td:first-child code { white-space: pre-wrap; word-break: break-word; font-size: .8rem; }
+.py-mistakes { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.py-mistakes li { display: grid; gap: 4px; margin: 0; }
+.py-err { display: block; direction: ltr; text-align: left; white-space: pre-wrap; word-break: break-word; color: var(--danger); background: var(--danger-soft); border-radius: 6px; padding: 4px 8px; font-size: .8rem; }
+.py-biz { margin: 0; font-size: .92rem; }
+.py-out { direction: ltr; text-align: left; background: var(--code-bg); color: var(--code-text); border-radius: var(--radius-sm); padding: 10px 14px; font-size: .8rem; line-height: 1.5; overflow-x: auto; margin: 0 0 10px; }
+.py-q { margin-bottom: 12px; }
+.py-answer { margin-top: 8px; }
+.py-hyp li, .py-steps li { margin-bottom: 6px; }
+.py-m2o code { margin-inline-end: 4px; }
+.py-check { display: inline-flex; align-items: center; gap: 8px; font-size: .9rem; cursor: pointer; }
+.py-check input { width: 18px; height: 18px; accent-color: var(--primary); }
+.py-notebook { display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.py-notebook > div { flex: 1 1 320px; min-width: 0; }
+.py-desc td, .py-desc th { white-space: nowrap; }
+.py-viz-grid > * { min-width: 0; }
+.py-insights { display: grid; gap: 14px; }
+.py-insight h3 { display: flex; gap: 10px; align-items: baseline; }
+.py-ins-n { display: inline-grid; place-items: center; min-width: 28px; height: 28px; border-radius: 50%; background: var(--primary-soft); color: var(--primary); font-weight: 800; font-size: .9rem; flex-shrink: 0; }
+.py-lim h3 { font-size: 1rem; }
+.py-quote { margin: 0; padding: 22px 26px; border-inline-start: 4px solid var(--accent); background: var(--accent-soft); border-radius: var(--radius-sm); }
+.py-quote p { margin: 0; font-size: 1.12rem; font-weight: 600; line-height: 1.6; }
+.py-summary { width: 100%; margin-top: 10px; font: inherit; font-size: .85rem; padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface-2); color: var(--text); }
+/* data status + file loader */
+.ss-bar { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; padding: 8px 12px; margin-bottom: 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface-2); font-size: .86rem; }
+.ss-bar > svg { width: 18px; height: 18px; color: var(--accent); flex-shrink: 0; }
+.ss-bar > span { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; }
+.ss-bar.empty > svg { color: var(--text-faint); }
+.ss-files { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.ss-file { display: grid; gap: 6px; padding: 14px; border: 1px dashed var(--border); border-radius: var(--radius-sm); background: var(--surface-2); cursor: pointer; min-width: 0; }
+.ss-file:hover, .ss-file:focus-within { border-color: var(--primary); }
+.ss-file-k { display: flex; gap: 8px; align-items: center; font-weight: 700; }
+.ss-file-k svg { width: 18px; height: 18px; color: var(--primary); }
+.ss-file input[type="file"] { max-width: 100%; font-size: .85rem; color: var(--text-muted); }
+.ss-progress .progress { height: 10px; }
+#ss-status:focus { outline: none; }
+@media (max-width: 680px) {
+  .py-facts > div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .ss-files { grid-template-columns: minmax(0, 1fr); }
+  .py-lines td:first-child { width: auto; }
 }

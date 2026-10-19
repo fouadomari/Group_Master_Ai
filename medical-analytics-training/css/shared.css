@@ -501,6 +501,11 @@ html[dir="rtl"] .journey-strip .js-arrow { transform: scaleX(-1); display: inlin
 .module-list li::before { content: counter(mod, decimal-leading-zero); width: 48px; height: 48px; border-radius: 12px; display: grid; place-items: center; font-weight: 800; background: var(--primary-soft); color: var(--primary); }
 .shortcut-table td:first-child { white-space: nowrap; }
 
+/* hero chart: the lines draw themselves in, then the forecast follows */
+.hero-chart path[fill="none"] { stroke-dasharray: 3000; stroke-dashoffset: 3000; animation: hero-draw 2.4s ease-out forwards; }
+.hero-chart path[fill="none"]:last-of-type { animation-delay: 1.8s; animation-duration: 1.2s; }
+@keyframes hero-draw { to { stroke-dashoffset: 0; } }
+
 /* ---------- Responsive ---------- */
 @media (max-width: 1100px) {
   .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }

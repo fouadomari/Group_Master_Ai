@@ -330,8 +330,8 @@ print(round(g.mean(), 1), "range", round(g.mean() - half, 1), "to", round(g.mean
         <li>${L("Associations are not causes — say “linked with”, not “caused by”.", "الارتباطات ليست أسبابًا — قل «مرتبط بـ» لا «ناتج عن».")}</li></ul>`,
       remember: L("Check → Clean → Describe → Test → Predict → Decide — and say how sure you are at every step.", "افحص ← نظّف ← صِف ← اختبر ← تنبأ ← قرّر — وقل مدى تأكدك في كل خطوة."),
     }) + `<section class="next-lecture"><div class="eyebrow">${L("Next", "التالي")}</div>
-        <h2>${L("Next Lecture: From Statistical Insight to BI, Automation and AI Agents", "المحاضرة التالية: من الرؤية الإحصائية إلى ذكاء الأعمال والأتمتة ووكلاء الذكاء الاصطناعي")}</h2>
-        <p class="lead" style="margin:0 auto 22px">${L("We turn these results into dashboards, automated pipelines and carefully supervised AI assistants.", "نحوّل هذه النتائج إلى لوحات مؤشرات ومسارات مؤتمتة ومساعدين ذكيين تحت إشراف دقيق.")}</p>
+        <h2>${L("Next Lecture: Data Analysis with Python — From Raw Data to Business Insights", "المحاضرة التالية: تحليل البيانات باستخدام بايثون — من البيانات الخام إلى رؤى الأعمال")}</h2>
+        <p class="lead" style="margin:0 auto 22px">${L("We apply the same steps with Python to real retail sales data from Kaggle.", "نطبّق الخطوات نفسها باستخدام بايثون على بيانات مبيعات تجزئة حقيقية من Kaggle.")}</p>
         <a class="btn btn-primary btn-xl" href="lecture-2.html">${L("GO TO LECTURE 2", "الانتقال إلى المحاضرة 2")} ${ICON.arrowR}</a></section>`;
     root.querySelectorAll(".journey-steps [data-i]").forEach(b => b.addEventListener("click", () => { st.i = +b.dataset.i; this.render(root); root.querySelector(`.journey-steps [data-i="${st.i}"]`).focus(); }));
     root.querySelectorAll("[data-mv]").forEach(b => b.addEventListener("click", () => { const dir = +b.dataset.mv; st.i = Math.max(0, Math.min(steps.length - 1, st.i + dir)); this.render(root); const nb = root.querySelector(`[data-mv="${dir}"]`); (nb.disabled ? root.querySelector(`[data-mv="${-dir}"]`) : nb).focus(); }));
