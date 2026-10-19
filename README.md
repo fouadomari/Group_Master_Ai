@@ -8,6 +8,7 @@ Two interactive, bilingual (English / العربية) lectures that explain medi
 |---|---|
 | **Lecture 1** | *From Messy Medical Data to Statistical Insight, Machine Learning and Forecasting* — 20 sections |
 | **Lecture 2** | *Data Analysis with Python — From Raw Data to Business Insights* (Kaggle Store Sales data) — 15 sections |
+| **PyPath** | A 30-day beginner Python course (Python → data science → machine learning → deep learning → NLP), linked from the **PyPath** button in the top bar. Days 1–2 are ready. |
 | **Data** | One realistic patient-screening training dataset (1,236 messy → 1,200 clean records) and 72 months of clinic activity. |
 
 ---
@@ -40,7 +41,7 @@ Introduction to data analysis · The Kaggle Store Sales dataset (and loading you
 
 ## Website features
 
-- Navigation: **Lecture 1 · Lecture 2** in the top bar; section sidebar (collapsible) with progress; Previous / Next; "Lecture start"; mobile menu, bottom bar and swipe.
+- Navigation: **Lecture 1 · Lecture 2 · PyPath** in the top bar (PyPath is a button). When the bar collapses (980 px and below) the menu holds the same links, with a full-width **PyPath** button just above the language and theme options; section sidebar (collapsible) with progress; Previous / Next; "Lecture start"; mobile menu, bottom bar and swipe.
 - Every section has its own URL (e.g. `lecture-1.html#data-cleaning`, `lecture-2.html#dashboard`); browser Back / Forward work.
 - Keyboard: `←` previous · `→` next · `Home` first · `End` last · `Esc` closes the menu.
 - English / Arabic with right-to-left layout; light / dark themes with automatic logo switching. Choices are remembered in the browser.
@@ -49,7 +50,8 @@ Introduction to data analysis · The Kaggle Store Sales dataset (and loading you
 - **Data Agent ("Ask the data"):** the platform's official chatbot, available on every page. It answers questions in English or Arabic by querying the platform's data (counts, averages, group comparisons, correlations, missing data, clinics, activity volumes, forecasts), shows its evidence, reasoning and Python query, refuses clinical decisions and individual patient look-ups, and keeps an activity log. It is rule-based (no large language model) and runs entirely in the browser. Code: `js/agent.js`.
 - **Official agent report:** `agent-report.html` explains how the Data Agent works — capabilities, query process, live trace of any question, data sources, guardrails, limitations and a live verification table (all reference answers match independent pandas results).
 - **Download the data:** the five CSV files (raw file, cleaned file, outliers, monthly clinic activity, data dictionary) can be downloaded from the home page (`index.html#data`), from the start page of each lecture, and from Lecture 1 Section 01. Everything else is shown on the page.
-- No external libraries; works directly from disk (`file://`) and on GitHub Pages.
+- **PyPath:** `pypath/index.html` lists the 30 days by phase (Python Basics, Data Science, Machine Learning, Deep Learning, NLP), with a lesson link and a printable PDF for each finished day and "coming soon" for the rest. Each day (`pypath/dayNN/`) is a readable, hand-written page where Python really runs in the browser ([Pyodide](https://pyodide.org)); exercises check themselves and progress is saved in the browser. The day pages are copied unchanged from the PyPath course folder.
+- No external libraries; works directly from disk (`file://`) and on GitHub Pages. **Exception:** PyPath lessons need internet the first time they are opened, because they download Python (Pyodide) from a CDN; the browser caches it after that.
 
 ---
 
@@ -75,11 +77,15 @@ medical-analytics-training/
 │   ├── report.js         official agent report page
 │   ├── code-snippets.js  the code shown behind every result
 │   └── site-data.js      generated: the datasets and analysis results used by the pages
+├── pypath/               PyPath, a 30-day beginner Python course
+│   ├── index.html        the path: all 30 days by phase, links back to the home page
+│   ├── home.css          extra styles for the path page (the rest comes from day01/style.css)
+│   └── dayNN/            one finished day: index.html · style.css · script.js · dayNN.pdf
 ├── data/  python/  sql/  notebooks/  exercises/   source material used to generate and verify the content
 └── tools/                build scripts (maintainers only)
 ```
 
-Learners only need the four HTML pages. The `data/`, `python/`, `sql/`, `notebooks/` and `exercises/` folders are the maintainers' source material: the Python scripts build the training data and every result shown on the site. They are not linked from the website.
+Learners only need the four HTML pages and the `pypath/` folder. The `data/`, `python/`, `sql/`, `notebooks/` and `exercises/` folders are the maintainers' source material: the Python scripts build the training data and every result shown on the site. They are not linked from the website.
 
 ---
 
@@ -99,7 +105,7 @@ python tools/make_share_package.py
 
 This writes two zips to `share/`:
 
-- `medical-analytics-training-website.zip` (about 0.8 MB): the four pages, styles, scripts, logos, the five CSV files and `OPEN-ME.txt`. Colleagues extract it and double-click `index.html`. It works offline and the Data Agent works too.
+- `medical-analytics-training-website.zip`: the four pages, styles, scripts, logos, the five CSV files, PyPath (`pypath/`: the path page and each finished day's page, style, script and PDF) and `OPEN-ME.txt`. Colleagues extract it and double-click `index.html`. It works offline and the Data Agent works too (only the PyPath lessons need internet the first time).
 - `medical-analytics-training-full-project.zip` (about 1.4 MB): adds the Python, SQL, notebooks, exercises and build tools, for maintainers.
 
 To give everyone a single link instead, publish the website zip's contents on GitHub Pages (below), Netlify Drop or a university web server.

@@ -1,0 +1,148 @@
+/*
+ * PyPath — landing page ("the path")
+ * ==================================
+ * Extra styles for pypath/index.html only. Colours, fonts and buttons come
+ * from day01/style.css (the same style.css every day uses), so the landing
+ * page looks like the lessons.
+ */
+
+
+/* ---------- Back link to the main website ---------- */
+
+.back-link {
+  display: inline-block;
+  font-weight: 600;
+  text-decoration: none;
+  margin-bottom: 16px;
+}
+
+.back-link:hover {
+  text-decoration: underline;
+}
+
+
+/* ---------- Title ---------- */
+
+.path-header {
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.path-header h1 {
+  font-size: 2.4rem;
+}
+
+
+/* ---------- One phase (Python Basics, Data Science, …) ---------- */
+
+.phase h2 {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+.phase h2 .muted {
+  font-size: 0.95rem;
+  font-weight: 400;
+}
+
+.days {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+
+/* ---------- One day in the list ---------- */
+
+.day {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin: 10px 0;
+}
+
+/* The round "1", "2", … badge */
+.day .number {
+  flex: 0 0 auto;
+  width: 2.2em;
+  height: 2.2em;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--soft);
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.day .topic {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.day .topic strong {
+  display: block;
+}
+
+.day .links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Finished days: blue badge and real buttons */
+.day.ready {
+  border-color: var(--blue);
+}
+
+.day.ready .number {
+  background: var(--blue);
+  color: #fff;
+}
+
+.button-link {
+  display: inline-block;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.button-link:hover {
+  background: var(--soft);
+}
+
+.button-link.main {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+}
+
+.button-link.main:hover {
+  filter: brightness(1.1);
+}
+
+.button-link:focus-visible,
+.back-link:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+/* Days that are not written yet */
+.soon {
+  font-size: 0.85rem;
+  color: var(--muted);
+  background: var(--soft);
+  border-radius: 999px;
+  padding: 2px 10px;
+}

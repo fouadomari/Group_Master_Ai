@@ -137,6 +137,12 @@ html[lang="en"] [data-lang="ar"], html[lang="ar"] [data-lang="en"] { display: no
 }
 .main-nav a:hover { color: var(--text); background: var(--surface-2); }
 .main-nav a[aria-current="page"] { color: var(--primary); background: var(--primary-soft); }
+/* PyPath (pypath/index.html): an outlined pill button after the lecture links */
+.main-nav a.nav-pypath {
+  margin-inline-start: 8px; padding: .38rem .95rem; border-radius: 999px;
+  color: var(--primary); border: 1px solid var(--primary); background: var(--primary-soft);
+}
+.main-nav a.nav-pypath:hover { color: #fff; background: var(--primary); }
 .header-tools { display: flex; align-items: center; gap: 8px; }
 .lang-switch {
   display: inline-flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface);
@@ -180,6 +186,10 @@ html[dir="rtl"] .drawer { transform: translateX(-105%); }
 .drawer-body nav a[aria-current="page"] { background: var(--primary-soft); color: var(--primary); }
 .drawer-section-title { font-size: .74rem; text-transform: uppercase; letter-spacing: .08em; color: var(--text-faint); margin: 16px 10px 6px; font-weight: 700; }
 .drawer-tools { display: flex; gap: 10px; padding: 14px 16px; border-top: 1px solid var(--border); align-items: center; flex-wrap: wrap; }
+/* PyPath button: full width, directly above the language and theme options */
+.drawer-pypath { padding: 14px 16px 0; border-top: 1px solid var(--border); }
+.drawer-pypath .btn { width: 100%; }
+.drawer-pypath + .drawer-tools { border-top: 0; }
 
 
 /* ---------- Layout ---------- */

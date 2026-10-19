@@ -53,6 +53,7 @@ const I18N = {
     "nav.home": "Home", "nav.l1": "Lecture 1", "nav.l2": "Lecture 2", "nav.downloads": "Downloads",
     "nav.exercises": "Exercises", "nav.about": "About", "nav.menu": "Open menu", "nav.close": "Close menu",
     "nav.main": "Main navigation", "nav.sections": "Sections",
+    "nav.pypath": "PyPath", "nav.pypathTitle": "PyPath — 30 days of Python",
     "theme.toDark": "Switch to dark mode", "theme.toLight": "Switch to light mode", "theme.label": "Theme",
     "lang.label": "Language", "skip": "Skip to main content",
     "footer.about": "Two interactive lectures that explain, step by step, how raw medical data becomes insight — and how insight becomes dashboards, automation and AI assistance.",
@@ -74,6 +75,7 @@ const I18N = {
     "nav.home": "الرئيسية", "nav.l1": "المحاضرة 1", "nav.l2": "المحاضرة 2", "nav.downloads": "التنزيلات",
     "nav.exercises": "التمارين", "nav.about": "حول", "nav.menu": "فتح القائمة", "nav.close": "إغلاق القائمة",
     "nav.main": "التنقل الرئيسي", "nav.sections": "الأقسام",
+    "nav.pypath": "PyPath", "nav.pypathTitle": "PyPath — ٣٠ يومًا من بايثون",
     "theme.toDark": "التبديل إلى الوضع الداكن", "theme.toLight": "التبديل إلى الوضع الفاتح", "theme.label": "المظهر",
     "lang.label": "اللغة", "skip": "انتقل إلى المحتوى الرئيسي",
     "footer.about": "محاضرتان تفاعليتان تشرحان خطوة بخطوة كيف تتحول البيانات الطبية الخام إلى رؤية — وكيف تتحول الرؤية إلى لوحات مؤشرات وأتمتة ومساعدة بالذكاء الاصطناعي.",
@@ -1080,6 +1082,11 @@ const Shell = (() => {
   let drawerExtra = null;
   let lastFocus = null;
 
+  /* PyPath (30-day Python course in pypath/): a button after the lecture links */
+  function pypathBtn(cls) {
+    return `<a class="${cls}" href="pypath/index.html" title="${t("nav.pypathTitle")}" aria-label="${t("nav.pypathTitle")}">${t("nav.pypath")}</a>`;
+  }
+
   function langSwitch() {
     return `<div class="lang-switch" role="group" aria-label="${t("lang.label")}">
       <button type="button" data-lang-btn="en" lang="en" aria-pressed="${App.lang === "en"}">EN</button><span class="sep" aria-hidden="true"></span>
@@ -1099,7 +1106,7 @@ const Shell = (() => {
         <img data-logo src="${BRAND.logos[App.theme]}" alt="" width="36" height="44">
         <span class="brand-text"><strong>${esc(BRAND.createdBy)}</strong><span>${esc(LT(BRAND.courseTitle))}</span></span>
       </a>
-      <nav class="main-nav" aria-label="${t("nav.main")}">${links().map(l => `<a href="${l.href}" ${l.key === current ? 'aria-current="page"' : ""}>${l.label}</a>`).join("")}</nav>
+      <nav class="main-nav" aria-label="${t("nav.main")}">${links().map(l => `<a href="${l.href}" ${l.key === current ? 'aria-current="page"' : ""}>${l.label}</a>`).join("")}${pypathBtn("nav-pypath")}</nav>
       <div class="header-tools">${langSwitch()}${themeBtn()}
         <button type="button" class="icon-btn menu-btn" data-drawer-open aria-label="${t("nav.menu")}" aria-controls="site-drawer" aria-expanded="false">${ICON.menu}</button>
       </div></div>`;
@@ -1118,6 +1125,7 @@ const Shell = (() => {
         <button type="button" class="icon-btn" data-drawer-close aria-label="${t("nav.close")}">${ICON.close}</button></div>
       <div class="drawer-body"><nav aria-label="${t("nav.main")}">${links().map(l => `<a href="${l.href}" ${l.key === current ? 'aria-current="page"' : ""}>${l.label}</a>`).join("")}</nav>
         ${drawerExtra ? drawerExtra() : ""}</div>
+      <div class="drawer-pypath">${pypathBtn("btn btn-primary")}</div>
       <div class="drawer-tools"><span class="small muted">${t("lang.label")}</span>${langSwitch()}<span class="spacer"></span>${themeBtn("drawer-theme")}</div>`;
   }
 
@@ -1149,6 +1157,7 @@ const Shell = (() => {
         <div><h4>${t("footer.learn")}</h4><ul>
           ${page === "home" ? "" : `<li><a href="lecture-1.html">${t("nav.l1")} — ${L("From messy data to insight", "من البيانات غير المنظمة إلى الرؤية")}</a></li>
           <li><a href="lecture-2.html">${t("nav.l2")} — ${L("Data analysis with Python", "تحليل البيانات باستخدام بايثون")}</a></li>`}
+          <li><a href="pypath/index.html">PyPath — ${L("30 days of Python", "٣٠ يومًا من بايثون")}</a></li>
           <li><a href="index.html#data">${L("Download the data", "تنزيل البيانات")}</a></li>
           <li><a href="agent-report.html">${L("Data Agent — official report", "وكيل البيانات — التقرير الرسمي")}</a></li></ul></div>
       </div>

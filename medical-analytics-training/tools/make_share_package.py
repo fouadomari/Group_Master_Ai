@@ -5,8 +5,8 @@ Created by Master of AI.
     python tools/make_share_package.py
 
 share/medical-analytics-training-website.zip
-    Only what the website needs (4 pages, css, js, logos, the five CSV files)
-    plus OPEN-ME.txt. Colleagues unzip it and double-click index.html.
+    Only what the website needs (4 pages, css, js, logos, the five CSV files,
+    the PyPath course in pypath/) plus OPEN-ME.txt. Colleagues unzip it and double-click index.html.
 share/medical-analytics-training-full-project.zip
     Everything a maintainer needs to rebuild the data and results
     (python, sql, notebooks, exercises, tools), without generated model files.
@@ -19,7 +19,10 @@ OUT = ROOT / "share"
 NAME = "medical-analytics-training"
 
 WEBSITE = ["index.html", "lecture-1.html", "lecture-2.html", "agent-report.html",
-           "css/*.css", "js/*.js", "assets/*.png", "data/*.csv", "notebooks/06_store_sales_analysis.ipynb"]
+           "css/*.css", "js/*.js", "assets/*.png", "data/*.csv", "notebooks/06_store_sales_analysis.ipynb",
+           # PyPath: the landing page and only the course files of each finished day
+           "pypath/index.html", "pypath/home.css",
+           "pypath/day*/index.html", "pypath/day*/style.css", "pypath/day*/script.js", "pypath/day*/day*.pdf"]
 
 SKIP_DIRS = {"share", "__pycache__", ".ipynb_checkpoints", ".git", "models"}
 SKIP_SUFFIX = {".pyc", ".db"}
@@ -32,15 +35,20 @@ HOW TO OPEN
 2. Double-click index.html. It opens in your web browser (Chrome, Edge, Firefox or Safari).
 3. Choose Lecture 1 or Lecture 2. The "Ask the data" button (bottom corner of every page)
    opens the Data Agent chatbot. It works in English and Arabic.
+4. The PyPath button (top bar, or the menu on small screens) opens PyPath,
+   a 30-day beginner Python course.
 
 Nothing needs to be installed and no internet connection is required
 (with internet the pages use nicer fonts; without it they use the system fonts).
+Only the PyPath lessons need internet the first time you open one: they download
+Python into the browser, which then remembers it.
 
 PAGES
 index.html          Home - choose a lecture, download the data
 lecture-1.html      Lecture 1 (20 sections)
 lecture-2.html      Lecture 2 - Data Analysis with Python (15 sections)
 agent-report.html   How the Data Agent works (official report)
+pypath/index.html   PyPath - 30 days of Python (each day: a lesson page and a PDF)
 
 All files contain realistic training data, prepared for teaching.
 """
