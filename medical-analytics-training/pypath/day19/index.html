@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Day 19: Decision trees and random forests · PyPath</title>
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Python for the browser (Pyodide). Downloaded the first time, then cached. -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v314.0.7/full/pyodide.js"></script>
+</head>
+
+<body data-day="day19">
+<main>
+
+  <!-- =============================================================
+       HEADER
+       ============================================================= -->
+  <header class="lesson-header">
+    <p class="muted small">Machine Learning · Day 19 of 30 · about 60 minutes</p>
+    <h1>Decision trees and random forests</h1>
+    <div class="tools">
+      <button id="reset-variables" class="quiet" title="Forget all variables created by this page's code boxes">↺ Forget variables</button>
+    </div>
+  </header>
+
+
+  <!-- =============================================================
+       TODAY'S GOAL
+       ============================================================= -->
+  <h2>🎯 Today's goal</h2>
+  <p>By the end of this hour you will:</p>
+  <ul>
+    <li>understand a <strong>decision tree</strong> as a game of "20 questions" about the data</li>
+    <li>train one with <code>DecisionTreeClassifier</code> and control its size with <code>max_depth</code></li>
+    <li><strong>read the rules</strong> a tree learned, as text and as a picture</li>
+    <li>spot <strong>overfitting</strong> by comparing train and test accuracy</li>
+    <li>build a <strong>random forest</strong> (many trees voting) and see which features matter most</li>
+  </ul>
+
+
+  <!-- =============================================================
+       WHY THIS MATTERS
+       ============================================================= -->
+  <h2>🤔 Why this matters</h2>
+  <p>
+    Think of the game "20 questions". Your friend thinks of an animal, and you ask yes/no
+    questions: <em>"Does it fly?"</em> No. <em>"Does it live in water?"</em> Yes.
+    <em>"Is it bigger than a person?"</em> Yes… <em>"A whale!"</em> Good players ask the
+    questions that split the possibilities best.
+  </p>
+  <p>
+    A <strong>decision tree</strong> plays exactly this game with data. It learns a list of
+    questions like <em>"Is the colour intensity at most 3.8?"</em> and follows the answers down
+    to a prediction. Trees are popular in banks, hospitals and shops because a person can
+    <strong>read</strong> the rules and check them. A <strong>random forest</strong> is a
+    crowd of trees that vote, and it is one of the most used models for table-shaped data.
+  </p>
+  <p class="note screen-only">
+    <strong>Remember:</strong> the code boxes on this page share their variables, like pages of
+    one notebook. Run them <strong>from top to bottom</strong>. The first box needs a few extra
+    seconds to load scikit-learn.
+  </p>
+
+
+  <!-- =============================================================
+       THE DATA
+       ============================================================= -->
+  <h2>🍷 Today's data: the wine dataset</h2>
+  <p>
+    scikit-learn comes with a small classic teaching dataset: chemical measurements of
+    <strong>178 wines</strong> grown in one region of Italy by <strong>three different
+    growers</strong>. The growers are called <code>class_0</code>, <code>class_1</code> and
+    <code>class_2</code>. Our job: from the 13 measurements (alcohol, colour, and so on),
+    predict which grower made each wine. You don't need to know anything about wine; the
+    columns are just numbers.
+  </p>
+
+  <div class="cell">
+    <textarea>
+import pandas as pd            # as_frame=True below gives pandas tables
+from sklearn.datasets import load_wine
+
+wine = load_wine(as_frame=True)
+X = wine.data          # the features: 13 measurement columns
+y = wine.target        # the label: grower 0, 1 or 2
+
+print("Rows and columns:", X.shape)
+print("Growers:", ", ".join(wine.target_names))
+print("Wines per grower:", y.value_counts().sort_index().to_dict())
+# show 4 of the 13 columns for the first 5 wines
+X[["alcohol", "flavanoids", "color_intensity", "proline"]].head()</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+
+  <!-- =============================================================
+       RULES BY HAND
+       ============================================================= -->
+  <h2>🌳 A tree is just a set of if / else questions</h2>
+  <p>
+    Before using scikit-learn, here is a "tree" written by hand as a function with
+    <code>if</code> / <code>elif</code> / <code>else</code> (Days 4 and 6). It asks at most two
+    questions about a wine and then names a grower:
+  </p>
+
+  <div class="cell">
+    <textarea>
+def guess_grower(color_intensity, flavanoids):
+    if color_intensity &lt;= 3.8:          # question 1
+        return "class_1"
+    elif flavanoids &lt;= 1.6:             # question 2
+        return "class_2"
+    else:
+        return "class_0"
+
+first = X.iloc[0]                       # the first wine in the table
+print("My guess:", guess_grower(first["color_intensity"], first["flavanoids"]))
+print("Real grower:", wine.target_names[y.iloc[0]])</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    Where did the numbers 3.8 and 1.6 come from? I cheated: a decision tree found them. Choosing
+    good questions by hand is hard. The point of today is to let the computer
+    <strong>learn the questions</strong> from examples.
+  </p>
+  <p>Some words you'll see:</p>
+  <table>
+    <thead>
+      <tr><th>Word</th><th>Meaning</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>node</strong></td><td>one question in the tree, like <code>color_intensity &lt;= 3.8</code></td></tr>
+      <tr><td><strong>root</strong></td><td>the very first question, at the top (trees are drawn upside down)</td></tr>
+      <tr><td><strong>leaf</strong></td><td>an end point with no more questions: it gives the prediction</td></tr>
+      <tr><td><strong>depth</strong></td><td>how many questions in a row the tree may ask before reaching a leaf</td></tr>
+    </tbody>
+  </table>
+
+
+  <!-- =============================================================
+       FIRST TREE
+       ============================================================= -->
+  <h2>🤖 Training a decision tree</h2>
+  <p>
+    Same pattern as every scikit-learn model (Day 16): split the data, create the model,
+    <code>fit</code>, then <code>score</code> on the test set. <code>max_depth=2</code> means
+    "ask at most 2 questions in a row", which keeps the tree tiny and easy to read.
+  </p>
+
+  <div class="cell">
+    <textarea>
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.25, random_state=42, stratify=y)
+
+small_tree = DecisionTreeClassifier(max_depth=2, random_state=42)
+small_tree.fit(X_train, y_train)
+
+print(f"Train accuracy: {small_tree.score(X_train, y_train):.3f}")
+print(f"Test accuracy:  {small_tree.score(X_test, y_test):.3f}")</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    Only two questions in a row, and it already gets most of the test wines right. How does
+    the tree choose a question? It tries <em>every</em> column and many cut-off values, and
+    keeps the question that leaves the two groups <strong>least mixed</strong> (ideally each
+    group holds just one grower). scikit-learn measures "mixed" with a number called
+    <strong>gini</strong>: 0 means "all one class", bigger means more mixed.
+  </p>
+
+
+  <!-- =============================================================
+       READING THE RULES
+       ============================================================= -->
+  <h2>📜 Reading the rules</h2>
+  <p>
+    The best thing about a tree: you can print what it learned. <code>export_text</code>
+    turns the tree into indented text. Give it the column names, or it calls them
+    <code>feature_0</code>, <code>feature_1</code>…
+  </p>
+
+  <div class="cell">
+    <textarea>
+from sklearn.tree import export_text
+
+rules = export_text(small_tree, feature_names=list(X.columns))
+print(rules)</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    Read it like the <code>if</code> / <code>else</code> function above: each <code>|---</code>
+    is a question, and more indentation means a deeper question. Lines ending in
+    <code>class: …</code> are leaves.
+  </p>
+  <p>You can also draw the tree with Matplotlib (Day 13). Each box shows its question, its gini, how many training wines reached it (<code>samples</code>), and the winning class. Colours show the class, and paler boxes are more mixed:</p>
+
+  <div class="cell">
+    <textarea>
+import matplotlib.pyplot as plt
+from sklearn.tree import plot_tree
+
+plt.figure(figsize=(10, 5))
+plot_tree(small_tree, feature_names=list(X.columns),
+          class_names=list(wine.target_names), filled=True, fontsize=9)
+plt.title("A decision tree with max_depth=2")
+plt.show()</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    To predict for a new wine, the tree simply follows the arrows. Here are the first three
+    test wines:
+  </p>
+
+  <div class="cell">
+    <textarea>
+three_wines = X_test.iloc[:3]
+print("Predicted:", small_tree.predict(three_wines))
+print("Real:     ", y_test.iloc[:3].to_numpy())</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>A model must be trained before it can answer. Asking a brand-new tree for predictions is a mistake you will make one day:</p>
+
+  <div class="cell error-demo">
+    <textarea>
+new_tree = DecisionTreeClassifier(max_depth=2)
+new_tree.predict(X_test)         # oops: we forgot new_tree.fit(...)</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    <code>NotFittedError</code> means exactly that: call <code>.fit(X_train, y_train)</code>
+    first, then <code>.predict(...)</code>.
+  </p>
+
+
+  <!-- =============================================================
+       FEATURE IMPORTANCE
+       ============================================================= -->
+  <h2>⭐ Which columns did the tree use?</h2>
+  <p>
+    After training, <code>feature_importances_</code> gives every column a score. The scores add
+    up to 1, and a column the tree never asked about gets 0. Putting them in a pandas Series
+    (Day 10) makes them easy to sort and plot:
+  </p>
+
+  <div class="cell">
+    <textarea>
+tree_importance = pd.Series(small_tree.feature_importances_, index=X.columns)
+tree_importance = tree_importance.sort_values(ascending=False)
+tree_importance.round(3)</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    Only the columns in the questions above get a score above 0. With just two levels of
+    questions, the tree ignores most of the data.
+  </p>
+
+
+  <!-- =============================================================
+       OVERFITTING
+       ============================================================= -->
+  <h2>📈 Deeper trees and overfitting</h2>
+  <p>
+    What if we let the tree ask more questions? Let's try several depths in a loop
+    (Day 5) and write down train and test accuracy each time. <code>None</code> means
+    "no limit: keep asking until every leaf is pure" (holds wines from only one grower).
+  </p>
+
+  <div class="cell">
+    <textarea>
+depths = [1, 2, 3, 4, 5, None]
+for depth in depths:
+    model = DecisionTreeClassifier(max_depth=depth, random_state=42)
+    model.fit(X_train, y_train)
+    train_acc = model.score(X_train, y_train)
+    test_acc = model.score(X_test, y_test)
+    gap = train_acc - test_acc
+    print(f"depth={depth}  train={train_acc:.3f}  test={test_acc:.3f}  gap={gap:.3f}")</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    Look at the train column: from depth 4 on, the tree scores a <strong>perfect 1.000</strong>
+    on the training wines. It has asked enough questions to give every single training wine
+    its own little corner. But the test score doesn't follow; it stays below 1. That is
+    <strong>overfitting</strong>: the model <em>memorised</em> the training examples, including
+    their random quirks, instead of learning the general pattern. It's like a student who
+    learns last year's exam answers by heart and then meets new questions.
+  </p>
+  <p class="note">
+    <strong>Rule of thumb:</strong> a <strong>big gap</strong> between train and test accuracy is
+    the warning sign of overfitting. A perfect train score is not a reason to celebrate.
+    Limiting <code>max_depth</code> is the simplest cure. On this small, clean dataset the gap
+    stays modest; on messy real data an unlimited tree can do far worse on the test set.
+  </p>
+
+  <p>A single tree has another weakness: it is <strong>jumpy</strong>. Train it on a slightly different split and you can get quite different questions and scores. Let's split the data 5 different ways:</p>
+
+  <div class="cell">
+    <textarea>
+tree_scores = []
+for seed in [0, 1, 2, 3, 4]:
+    Xa, Xb, ya, yb = train_test_split(
+        X, y, test_size=0.25, random_state=seed, stratify=y)
+    model = DecisionTreeClassifier(random_state=42).fit(Xa, ya)
+    tree_scores.append(round(model.score(Xb, yb), 3))
+
+print("One tree, 5 different splits:", tree_scores)</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+
+  <!-- =============================================================
+       RANDOM FOREST
+       ============================================================= -->
+  <h2>🌲🌲🌲 Random forests: many trees vote</h2>
+  <p>
+    Ask one person to guess the number of sweets in a jar and they may be far off. Ask 100
+    people and take the average, and the guess is usually much better: the individual
+    mistakes cancel out. A <strong>random forest</strong> uses this "wisdom of the crowd":
+  </p>
+  <ol>
+    <li>It trains many trees (<code>n_estimators</code> of them, for example 100).</li>
+    <li>Each tree sees a slightly different <strong>random sample</strong> of the training rows, and at every question it may only pick from a random handful of the columns. So the trees end up different from each other.</li>
+    <li>To predict, every tree votes, and the class with the most votes wins.</li>
+  </ol>
+
+  <div class="cell">
+    <textarea>
+from sklearn.ensemble import RandomForestClassifier
+
+forest = RandomForestClassifier(n_estimators=100, random_state=42)
+forest.fit(X_train, y_train)
+
+print(f"Forest train accuracy: {forest.score(X_train, y_train):.3f}")
+print(f"Forest test accuracy:  {forest.score(X_test, y_test):.3f}")
+print("Number of trees inside:", len(forest.estimators_))</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    <code>random_state=42</code> fixes the random choices, so you get the same forest every
+    time you run the box. Now the same 5-splits experiment, single tree versus forest:
+  </p>
+
+  <div class="cell">
+    <textarea>
+forest_scores = []
+for seed in [0, 1, 2, 3, 4]:
+    Xa, Xb, ya, yb = train_test_split(
+        X, y, test_size=0.25, random_state=seed, stratify=y)
+    model = RandomForestClassifier(n_estimators=50, random_state=42).fit(Xa, ya)
+    forest_scores.append(round(model.score(Xb, yb), 3))
+
+print("One tree:", tree_scores)
+print("Forest:  ", forest_scores)
+
+plt.figure(figsize=(6, 3.5))
+plt.plot([0, 1, 2, 3, 4], tree_scores, marker="o", label="one tree")
+plt.plot([0, 1, 2, 3, 4], forest_scores, marker="s", label="random forest")
+plt.ylim(0.8, 1.02)
+plt.xlabel("which split (random_state)")
+plt.ylabel("test accuracy")
+plt.title("Forests are higher and steadier")
+plt.legend()
+plt.show()</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    The forest is better on every split, and its scores jump around less. The price: you
+    can't read 100 trees the way you read one. You give up some explainability for accuracy.
+  </p>
+  <p>A forest still tells you which columns mattered, averaged over all its trees. This list is usually more trustworthy than the one from a single tree:</p>
+
+  <div class="cell">
+    <textarea>
+forest_importance = pd.Series(forest.feature_importances_, index=X.columns)
+forest_importance = forest_importance.sort_values()
+
+plt.figure(figsize=(7, 4.5))
+plt.barh(forest_importance.index, forest_importance.values, color="seagreen")
+plt.xlabel("importance (all bars add up to 1)")
+plt.title("What the random forest relies on")
+plt.show()
+
+print("Most important column:", forest_importance.index[-1])</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p class="note">
+    <strong>Careful:</strong> importance says what the model <em>used</em>, not what
+    <em>causes</em> the result (remember "correlation is not causation" from Day 14). When two
+    columns carry similar information, the forest may split the credit between them.
+  </p>
+
+
+  <!-- =============================================================
+       COMMON MISTAKES + RECAP
+       ============================================================= -->
+  <h2>⚠️ Common mistakes</h2>
+  <ul>
+    <li>Calling <code>.predict()</code> before <code>.fit()</code> → <code>NotFittedError</code>.</li>
+    <li>Celebrating 100% train accuracy. Always look at the <strong>test</strong> score, and at the gap between them.</li>
+    <li>Letting a tree grow without limit on small data. Try a few <code>max_depth</code> values and compare test scores.</li>
+    <li>Forgetting <code>feature_names=list(X.columns)</code> in <code>export_text</code> or <code>plot_tree</code>, and getting rules about <code>feature_0</code>, <code>feature_1</code>…</li>
+    <li>Forgetting <code>random_state=42</code>: your forest (and its scores) change a little every run.</li>
+    <li>Reading feature importance as "this causes that".</li>
+  </ul>
+
+  <h2>✅ Recap</h2>
+  <ul>
+    <li>A decision tree learns a chain of yes/no questions; each <strong>leaf</strong> gives a prediction.</li>
+    <li><code>DecisionTreeClassifier(max_depth=…, random_state=42)</code>, then <code>fit</code>, <code>predict</code>, <code>score</code>.</li>
+    <li><code>export_text(tree, feature_names=…)</code> and <code>plot_tree(...)</code> show the learned rules.</li>
+    <li>Train accuracy far above test accuracy = <strong>overfitting</strong>. Smaller depth helps.</li>
+    <li><code>RandomForestClassifier(n_estimators=100, random_state=42)</code>: many different trees vote; usually more accurate and steadier than one tree.</li>
+    <li><code>feature_importances_</code> shows which columns the model relied on (not causes).</li>
+  </ul>
+
+
+  <!-- =============================================================
+       EXERCISES
+       Each exercise has: a task, a starting code box, hints,
+       hidden tests (<script class="tests">) and a solution
+       (<script class="solution">). The tests are Python "assert" lines
+       and can look at the variables the answer created.
+       ============================================================= -->
+  <h2>🏋️ Exercises</h2>
+  <p class="screen-only">
+    Write your answer in the box and click <strong>✓ Check my answer</strong>. Stuck? Use the
+    hints. After 3 tries you can see a solution. Each starting box already loads the wine data
+    and splits it, exactly like the lesson.
+  </p>
+  <p class="print-only">
+    Write your answer in the space under each exercise. Try it on the computer too, by opening
+    this day's <code>index.html</code>. Solutions are in the answer key at the end.
+  </p>
+
+  <div class="score">
+    <div class="bar"><div id="score-bar"></div></div>
+    <span id="score-text" class="muted small">0 / 5 done</span>
+  </div>
+
+
+  <!-- Exercise 1 -->
+  <section class="exercise" id="shallow-tree">
+    <h3>1. A shallow tree</h3>
+    <p>
+      Create a <code>DecisionTreeClassifier</code> with <code>max_depth=2</code> and
+      <code>random_state=42</code> in a variable called <code>tree</code>, and train it on the
+      training data. Then store its accuracy on the <strong>test</strong> data in
+      <code>test_acc</code>.
+    </p>
+    <textarea>
+import pandas as pd
+from sklearn.datasets import load_wine
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+
+wine = load_wine(as_frame=True)
+X = wine.data
+y = wine.target
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.25, random_state=42, stratify=y)
+
+# Create and train tree, then calculate test_acc
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden><code>tree = DecisionTreeClassifier(max_depth=2, random_state=42)</code></li>
+      <li hidden>Train it with <code>tree.fit(X_train, y_train)</code>.</li>
+      <li hidden><code>test_acc = tree.score(X_test, y_test)</code></li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+from sklearn.tree import DecisionTreeClassifier as _Tree
+assert "tree" in globals(), "Create a variable called tree."
+assert isinstance(tree, _Tree), "tree should be a DecisionTreeClassifier(...)."
+assert tree.max_depth == 2, f"Use max_depth=2 (yours is {tree.max_depth})."
+assert hasattr(tree, "tree_"), "The tree isn't trained yet. Call tree.fit(X_train, y_train)."
+assert "test_acc" in globals(), "Store the test accuracy in a variable called test_acc."
+assert "score(" in __code__ or "accuracy_score" in __code__, "Calculate test_acc with .score(...), don't type the number."
+assert abs(test_acc - tree.score(X_test, y_test)) < 1e-9, "test_acc should be the accuracy on the TEST data: tree.score(X_test, y_test)."
+</script>
+<script type="text/python" class="solution">
+import pandas as pd
+from sklearn.datasets import load_wine
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+
+wine = load_wine(as_frame=True)
+X = wine.data
+y = wine.target
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.25, random_state=42, stratify=y)
+
+tree = DecisionTreeClassifier(max_depth=2, random_state=42)
+tree.fit(X_train, y_train)
+test_acc = tree.score(X_test, y_test)
+print(f"Test accuracy: {test_acc:.3f}")
+</script>
+  </section>
+
+
+  <!-- Exercise 2 -->
+  <section class="exercise" id="read-rules">
+    <h3>2. Read the rules</h3>
+    <p>
+      The starting code trains a tree with <code>max_depth=3</code>. Turn it into text with
+      <code>export_text</code>, <strong>using the real column names</strong>, store the text
+      in <code>rules</code> and print it. Then read the printout and store the name of the
+      column in the tree's <strong>very first question</strong> (the top line) as text in
+      <code>first_question</code>.
+    </p>
+    <textarea>
+import pandas as pd
+from sklearn.datasets import load_wine
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier, export_text
+
+wine = load_wine(as_frame=True)
+X = wine.data
+y = wine.target
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.25, random_state=42, stratify=y)
+
+tree = DecisionTreeClassifier(max_depth=3, random_state=42)
+tree.fit(X_train, y_train)
+
+# Make rules, print them, then set first_question
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden><code>rules = export_text(tree, feature_names=list(X.columns))</code>, then <code>print(rules)</code>.</li>
+      <li hidden>Run it once and look at the first line: <code>|--- something &lt;= number</code>. The "something" is the column name.</li>
+      <li hidden>Store it in quotes, for example <code>first_question = "alcohol"</code> (but with the name you actually see).</li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+from sklearn.tree import export_text as _export
+assert "rules" in globals(), "Create a variable called rules with export_text(...)."
+assert isinstance(rules, str), "rules should be the text that export_text(...) gives back."
+assert "feature_0" not in rules, "Your rules say feature_0, feature_1… Add feature_names=list(X.columns) to export_text."
+assert rules == _export(tree, feature_names=list(X.columns)), "rules should be export_text(tree, feature_names=list(X.columns))."
+assert "class:" in __output__, "Print the rules with print(rules)."
+assert "first_question" in globals(), "Create a variable called first_question."
+_root = X.columns[tree.tree_.feature[0]]
+assert isinstance(first_question, str), "first_question should be text, in quotes."
+assert first_question.strip() == _root, f"Look at the very first line of the rules again. The first question is about a different column than '{first_question}'."
+</script>
+<script type="text/python" class="solution">
+import pandas as pd
+from sklearn.datasets import load_wine
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier, export_text
+
+wine = load_wine(as_frame=True)
+X = wine.data
+y = wine.target
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.25, random_state=42, stratify=y)
+
+tree = DecisionTreeClassifier(max_depth=3, random_state=42)
+tree.fit(X_train, y_train)
+
+rules = export_text(tree, feature_names=list(X.columns))
+print(rules)
+first_question = "color_intensity"
+</script>
+  </section>
+
+
+  <!-- Exercise 3 -->
+  <section class="exercise" id="depth-scan">
+    <h3>3. Depth scan</h3>
+    <p>
+      For each depth in <code>depths</code>, train a <code>DecisionTreeClassifier</code>
+      (with that <code>max_depth</code> and <code>random_state=42</code>) and append its
+      train accuracy to <code>train_scores</code> and its test accuracy to
+      <code>test_scores</code>. Use a <code>for</code> loop.
+    </p>
+    <textarea>
+import pandas as pd
+from sklearn.datasets import load_wine
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+
+wine = load_wine(as_frame=True)
+X = wine.data
+y = wine.target
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.25, random_state=42, stratify=y)
+
+depths = [1, 2, 3, 4, 5, 6]
+train_scores = []
+test_scores = []
+
+# Loop over depths here
+
+print("train:", train_scores)
+print("test: ", test_scores)
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden>Start with <code>for depth in depths:</code> and indent the lines inside by 4 spaces.</li>
+      <li hidden>Inside: <code>model = DecisionTreeClassifier(max_depth=depth, random_state=42)</code> and <code>model.fit(X_train, y_train)</code>.</li>
+      <li hidden><code>train_scores.append(model.score(X_train, y_train))</code> and the same with <code>X_test, y_test</code> for <code>test_scores</code>.</li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+from sklearn.tree import DecisionTreeClassifier as _Tree
+for _name in ["depths", "train_scores", "test_scores"]:
+    assert _name in globals(), f"Keep the variable called {_name}."
+assert "for " in __code__, "Use a for loop over depths."
+assert len(train_scores) == len(depths), f"train_scores should have one number per depth ({len(depths)}), but it has {len(train_scores)}."
+assert len(test_scores) == len(depths), f"test_scores should have one number per depth ({len(depths)}), but it has {len(test_scores)}."
+for _d, _tr, _te in zip(depths, train_scores, test_scores):
+    _m = _Tree(max_depth=_d, random_state=42).fit(X_train, y_train)
+    assert abs(_tr - _m.score(X_train, y_train)) < 1e-9, f"The train score for depth {_d} isn't right. Use model.score(X_train, y_train)."
+    assert abs(_te - _m.score(X_test, y_test)) < 1e-9, f"The test score for depth {_d} isn't right. Use model.score(X_test, y_test)."
+</script>
+<script type="text/python" class="solution">
+import pandas as pd
+from sklearn.datasets import load_wine
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+
+wine = load_wine(as_frame=True)
+X = wine.data
+y = wine.target
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.25, random_state=42, stratify=y)
+
+depths = [1, 2, 3, 4, 5, 6]
+train_scores = []
+test_scores = []
+
+for depth in depths:
+    model = DecisionTreeClassifier(max_depth=depth, random_state=42)
+    model.fit(X_train, y_train)
+    train_scores.append(model.score(X_train, y_train))
+    test_scores.append(model.score(X_test, y_test))
+
+print("train:", train_scores)
+print("test: ", test_scores)
+</script>
+  </section>
+
+
+  <!-- Exercise 4 -->
+  <section class="exercise" id="forest">
+    <h3>4. Grow a forest</h3>
+    <p>
+      Create a <code>RandomForestClassifier</code> with <code>n_estimators=100</code> and
+      <code>random_state=42</code> in a variable called <code>forest</code>, train it, and
+      store its <strong>test</strong> accuracy in <code>forest_acc</code>. It should reach at
+      least 0.9.
+    </p>
+    <textarea>
+import pandas as pd
+from sklearn.datasets import load_wine
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+
+wine = load_wine(as_frame=True)
+X = wine.data
+y = wine.target
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.25, random_state=42, stratify=y)
+
+# Create and train forest, then calculate forest_acc
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden>It works exactly like a tree: create, <code>fit</code>, <code>score</code>.</li>
+      <li hidden><code>forest = RandomForestClassifier(n_estimators=100, random_state=42)</code></li>
+      <li hidden><code>forest.fit(X_train, y_train)</code>, then <code>forest_acc = forest.score(X_test, y_test)</code></li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+from sklearn.ensemble import RandomForestClassifier as _Forest
+assert "forest" in globals(), "Create a variable called forest."
+assert isinstance(forest, _Forest), "forest should be a RandomForestClassifier(...)."
+assert forest.n_estimators == 100, f"Use n_estimators=100 (yours is {forest.n_estimators})."
+assert forest.random_state == 42, "Add random_state=42 so the forest is the same every run."
+assert hasattr(forest, "estimators_"), "The forest isn't trained yet. Call forest.fit(X_train, y_train)."
+assert "forest_acc" in globals(), "Store the test accuracy in a variable called forest_acc."
+assert "score(" in __code__ or "accuracy_score" in __code__, "Calculate forest_acc with .score(...), don't type the number."
+assert abs(forest_acc - forest.score(X_test, y_test)) < 1e-9, "forest_acc should be the accuracy on the TEST data: forest.score(X_test, y_test)."
+assert forest_acc >= 0.9, f"forest_acc is only {forest_acc:.3f}. Did you train on X_train, y_train?"
+</script>
+<script type="text/python" class="solution">
+import pandas as pd
+from sklearn.datasets import load_wine
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+
+wine = load_wine(as_frame=True)
+X = wine.data
+y = wine.target
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.25, random_state=42, stratify=y)
+
+forest = RandomForestClassifier(n_estimators=100, random_state=42)
+forest.fit(X_train, y_train)
+forest_acc = forest.score(X_test, y_test)
+print(f"Forest test accuracy: {forest_acc:.3f}")
+</script>
+  </section>
+
+
+  <!-- Exercise 5 -->
+  <section class="exercise" id="top-feature">
+    <h3>5. Challenge: the most important column</h3>
+    <p>
+      Train a random forest (<code>n_estimators=100</code>, <code>random_state=42</code>) called
+      <code>forest</code>. Then:
+    </p>
+    <ul>
+      <li>make a pandas Series called <code>importances</code> from <code>forest.feature_importances_</code>, with the column names as its index, sorted from <strong>biggest to smallest</strong></li>
+      <li>store the name of the most important column in <code>top_feature</code>, taken from the Series (not typed by hand)</li>
+    </ul>
+    <textarea>
+import pandas as pd
+from sklearn.datasets import load_wine
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+
+wine = load_wine(as_frame=True)
+X = wine.data
+y = wine.target
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.25, random_state=42, stratify=y)
+
+# Train forest, build importances, find top_feature
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden>After training: <code>pd.Series(forest.feature_importances_, index=X.columns)</code>.</li>
+      <li hidden>Sort it with <code>.sort_values(ascending=False)</code> so the biggest comes first.</li>
+      <li hidden>The first label of a sorted Series is <code>importances.index[0]</code>.</li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+import pandas as _pd
+from sklearn.ensemble import RandomForestClassifier as _Forest
+assert "forest" in globals() and isinstance(forest, _Forest), "Create a RandomForestClassifier called forest."
+assert hasattr(forest, "estimators_"), "Train the forest first with forest.fit(X_train, y_train)."
+assert forest.n_estimators == 100 and forest.random_state == 42, "Use n_estimators=100 and random_state=42."
+assert "importances" in globals(), "Create a Series called importances."
+assert isinstance(importances, _pd.Series), "importances should be a pandas Series: pd.Series(..., index=X.columns)."
+assert len(importances) == X.shape[1], "importances should have one value per column."
+assert set(importances.index) == set(X.columns), "Use the column names as the index: index=X.columns."
+assert list(importances.values) == sorted(importances.values, reverse=True), "Sort importances from biggest to smallest: .sort_values(ascending=False)."
+assert "feature_importances_" in __code__, "Build importances from forest.feature_importances_."
+assert "top_feature" in globals(), "Create a variable called top_feature."
+_best = X.columns[forest.feature_importances_.argmax()]
+assert top_feature == _best, f"top_feature should be '{_best}', the first label of your sorted Series."
+assert "index[0]" in __code__ or "idxmax" in __code__, "Take top_feature from the Series (for example importances.index[0]) instead of typing it."
+</script>
+<script type="text/python" class="solution">
+import pandas as pd
+from sklearn.datasets import load_wine
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+
+wine = load_wine(as_frame=True)
+X = wine.data
+y = wine.target
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.25, random_state=42, stratify=y)
+
+forest = RandomForestClassifier(n_estimators=100, random_state=42)
+forest.fit(X_train, y_train)
+
+importances = pd.Series(forest.feature_importances_, index=X.columns)
+importances = importances.sort_values(ascending=False)
+top_feature = importances.index[0]
+print(importances.round(3))
+print("Most important:", top_feature)
+</script>
+  </section>
+
+
+  <!-- Shown when all exercises are done -->
+  <section id="finished" class="finished" hidden>
+    <h2>🏆 Day 19 complete!</h2>
+    <p>You can now grow trees, read their rules, and plant a whole forest. Nicely done.</p>
+  </section>
+
+
+  <!-- =============================================================
+       TOMORROW
+       ============================================================= -->
+  <h2>🔜 Tomorrow</h2>
+  <p>
+    <strong>Evaluating models:</strong> so far we judged every model by accuracy. But a model
+    that always says "healthy" can be 95% accurate and still miss every sick patient.
+    Tomorrow you'll learn the confusion matrix, precision, recall and F1, how to choose a
+    decision threshold, and cross-validation for a fairer score.
+  </p>
+
+
+  <footer class="screen-only">
+    <p>
+      Your answers are saved in this browser only. Python downloads the first time you open
+      the page, so you need an internet connection.
+    </p>
+    <button id="erase-progress" class="quiet">Erase my answers for this day</button>
+  </footer>
+
+</main>
+
+<!-- Shows whether Python is loading or ready -->
+<div id="python-status" role="status"></div>
+
+<script src="script.js"></script>
+</body>
+</html>

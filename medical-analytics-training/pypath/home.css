@@ -62,7 +62,7 @@
   flex-wrap: wrap;
   gap: 8px 14px;
   background: var(--card);
-  border: 1px solid var(--line);
+  border: 1px solid var(--blue);
   border-radius: 12px;
   padding: 12px 16px;
   margin: 10px 0;
@@ -76,8 +76,8 @@
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: var(--soft);
-  color: var(--muted);
+  background: var(--blue);
+  color: #fff;
   font-weight: 700;
 }
 
@@ -96,16 +96,7 @@
   gap: 8px;
 }
 
-/* Finished days: blue badge and real buttons */
-.day.ready {
-  border-color: var(--blue);
-}
-
-.day.ready .number {
-  background: var(--blue);
-  color: #fff;
-}
-
+/* "Open" and "PDF" buttons */
 .button-link {
   display: inline-block;
   font-size: 0.95rem;
@@ -136,13 +127,4 @@
 .back-link:focus-visible {
   outline: 2px solid var(--blue);
   outline-offset: 2px;
-}
-
-/* Days that are not written yet */
-.soon {
-  font-size: 0.85rem;
-  color: var(--muted);
-  background: var(--soft);
-  border-radius: 999px;
-  padding: 2px 10px;
 }

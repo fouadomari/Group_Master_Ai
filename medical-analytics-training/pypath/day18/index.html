@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Day 18: Classification: logistic regression and KNN · PyPath</title>
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Python for the browser (Pyodide). Downloaded the first time, then cached. -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v314.0.7/full/pyodide.js"></script>
+</head>
+
+<body data-day="day18">
+<main>
+
+  <!-- =============================================================
+       HEADER
+       ============================================================= -->
+  <header class="lesson-header">
+    <p class="muted small">Machine Learning · Day 18 of 30 · about 60 minutes</p>
+    <h1>Classification: logistic regression and KNN</h1>
+    <div class="tools">
+      <button id="reset-variables" class="quiet" title="Forget all variables created by this page's code boxes">↺ Forget variables</button>
+    </div>
+  </header>
+
+
+  <!-- =============================================================
+       TODAY'S GOAL
+       ============================================================= -->
+  <h2>🎯 Today's goal</h2>
+  <p>By the end of this hour you will:</p>
+  <ul>
+    <li>train a <strong>logistic regression</strong> and get <strong>probabilities</strong>, not just answers</li>
+    <li>move the <strong>decision threshold</strong> and see what changes</li>
+    <li>understand how <strong>k-nearest neighbours</strong> (KNN) votes, and how to choose <code>k</code></li>
+    <li>know why features must be put on the <strong>same scale</strong>, and do it with <code>StandardScaler</code></li>
+    <li>chain steps with a <strong>pipeline</strong> and compare models fairly on the same split</li>
+  </ul>
+
+
+  <!-- =============================================================
+       WHY THIS MATTERS
+       ============================================================= -->
+  <h2>🤔 Why this matters</h2>
+  <p>
+    Is this e-mail spam? Will this customer leave? Is this transaction fraud? Most real
+    machine-learning jobs are <strong>classification</strong>: putting each example into one of
+    a few classes (groups). On Day 16 you trained a classifier and got answers. Today you'll
+    also get the model's <strong>confidence</strong>, because "spam, 51% sure" and "spam,
+    99% sure" deserve different treatment.
+  </p>
+  <p>
+    Think of a weather forecast: it doesn't say "rain" or "no rain", it says "70% chance of
+    rain", and <em>you</em> decide whether that's enough to take an umbrella. That decision
+    point is the <strong>threshold</strong>.
+  </p>
+  <p class="note screen-only">
+    <strong>Remember:</strong> the code boxes on this page share their variables, like pages of
+    one notebook. Run them <strong>from top to bottom</strong>.
+  </p>
+
+
+  <!-- =============================================================
+       THE DATA
+       ============================================================= -->
+  <h2>🔬 The data: breast cancer measurements</h2>
+  <p>
+    scikit-learn includes a real, well-known dataset of 569 breast tissue samples. For each
+    sample, a doctor took a microscope image of the cells, and a computer measured 30
+    features: the cells' size (radius, area), texture, smoothness, and so on. The label says
+    whether the sample was <strong>malignant</strong> (cancer, <code>0</code>) or
+    <strong>benign</strong> (not cancer, <code>1</code>).
+  </p>
+  <p class="note">
+    <strong>Teaching example only:</strong> we use this dataset because it's real, small and
+    clean, which makes it perfect for practising. Nothing on this page is medical advice, and
+    a model like this is <em>not</em> how anyone should be diagnosed.
+  </p>
+
+  <div class="cell">
+    <textarea>
+import pandas as pd
+from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import train_test_split
+
+cancer = load_breast_cancer(as_frame=True)
+X = cancer.data
+y = cancer.target
+
+print("Samples and features:", X.shape)
+print("Classes:", cancer.target_names.tolist())   # 0 malignant, 1 benign
+print(y.value_counts())
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.25, random_state=42, stratify=y)</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    We split right away (Day 16), with <code>stratify=y</code> because there are more benign
+    samples than malignant ones. Let's look at a few of the 30 features:
+  </p>
+
+  <div class="cell">
+    <textarea>
+X[["mean radius", "mean texture", "mean area", "mean smoothness"]].describe().round(2)</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    Keep an eye on the sizes of these numbers: the area goes up to 2501, the smoothness
+    never gets above 0.17. That will matter later today.
+  </p>
+
+
+  <!-- =============================================================
+       LOGISTIC REGRESSION
+       ============================================================= -->
+  <h2>📈 Logistic regression: a line that gives probabilities</h2>
+  <p>
+    Despite the word "regression" in its name, <strong>logistic regression</strong> is a
+    <em>classification</em> model. It works in two steps:
+  </p>
+  <ol>
+    <li>Like yesterday's linear regression, it adds up the features times their slopes, which gives a score that can be any number.</li>
+    <li>It squeezes that score into a <strong>probability</strong> between 0 and 1 with an S-shaped curve: very negative scores become almost 0, very positive ones almost 1.</li>
+  </ol>
+  <p>
+    Let's start with just two features. The steps are the same as always: create → fit →
+    predict → score:
+  </p>
+
+  <div class="cell">
+    <textarea>
+from sklearn.linear_model import LogisticRegression
+
+two = ["mean radius", "mean texture"]
+
+logistic = LogisticRegression()
+logistic.fit(X_train[two], y_train)
+
+print(f"Accuracy with 2 features: {logistic.score(X_test[two], y_test):.1%}")</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+
+  <!-- =============================================================
+       PREDICT VS PREDICT_PROBA
+       ============================================================= -->
+  <h2>🎲 <code>predict</code> versus <code>predict_proba</code></h2>
+  <p>
+    <code>predict</code> gives the class. <code>predict_proba</code> ("proba" = probability)
+    gives the chance of <em>each</em> class, one column per class in the order 0, 1:
+  </p>
+
+  <div class="cell">
+    <textarea>
+first5 = X_test[two].head()
+
+print("Classes:      ", logistic.predict(first5).tolist())
+print("Real answers: ", y_test.head().tolist())
+print()
+print("Probabilities [malignant, benign]:")
+print(logistic.predict_proba(first5).round(2))</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    Each row adds up to 1. The first sample is 93% benign: the model is quite sure. The third
+    is 55% malignant: a coin flip, and in fact the model got it wrong. Probabilities tell you
+    <em>which</em> answers to trust.
+  </p>
+
+
+  <!-- =============================================================
+       THRESHOLD
+       ============================================================= -->
+  <h2>🎚️ The decision threshold</h2>
+  <p>
+    <code>predict</code> simply says "benign" when the chance of benign is at least
+    <strong>0.5</strong>. That cut-off is the <strong>threshold</strong>, and you can choose a
+    different one. Suppose a mistaken "benign" is much worse than a mistaken "malignant"
+    (which would just lead to more tests). Then we might only say "benign" when the model is
+    at least 90% sure:
+  </p>
+
+  <div class="cell">
+    <textarea>
+chance_benign = logistic.predict_proba(X_test[two])[:, 1]   # column 1: benign
+
+for threshold in [0.5, 0.9]:
+    says_benign = chance_benign >= threshold
+    # said benign, but was malignant:
+    wrong_benign = (says_benign &amp; (y_test == 0)).sum()
+    print(f"Threshold {threshold}: {says_benign.sum()} called benign, "
+          f"of which really malignant: {wrong_benign}")</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    <code>[:, 1]</code> means "all rows, column 1" (Day 9), and <code>&amp;</code> means "and" for
+    arrays (Day 11). A higher threshold makes fewer "benign" calls, but those it makes are
+    much safer. Choosing the threshold isn't a maths question; it depends on what each kind of
+    mistake costs. You'll measure this properly on Day 20.
+  </p>
+
+
+  <!-- =============================================================
+       KNN
+       ============================================================= -->
+  <h2>🏘️ K-nearest neighbours: ask the neighbours</h2>
+  <p>
+    On Day 16 you used KNN without looking inside. Its idea: to classify a new sample, find
+    the <code>k</code> training samples that are <strong>closest</strong> to it (most similar
+    measurements) and let them <strong>vote</strong>. There's no formula to learn; "fitting"
+    just means remembering the training data.
+  </p>
+  <p>Here's one made-up new sample and its 5 nearest neighbours:</p>
+
+  <div class="cell">
+    <textarea>
+from sklearn.neighbors import KNeighborsClassifier
+
+knn = KNeighborsClassifier(n_neighbors=5)
+knn.fit(X_train[two], y_train)
+
+# a made-up new sample
+new_sample = pd.DataFrame({"mean radius": [13.0], "mean texture": [20.0]})
+distances, positions = knn.kneighbors(new_sample)
+
+print("Distances to the 5 neighbours:", distances[0].round(2).tolist())
+print("Their labels:", y_train.iloc[positions[0]].tolist())
+print("Vote result:", knn.predict(new_sample)[0])
+print("Votes [malignant, benign]:", knn.predict_proba(new_sample)[0].tolist())</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    Four neighbours say benign (1), one says malignant (0), so the answer is benign, and
+    KNN's "probability" is simply the share of votes: 4 out of 5 = 0.8.
+  </p>
+  <p>
+    <strong>Choosing <code>k</code>:</strong> with <code>k=1</code> a single odd neighbour decides
+    everything (too nervous). With a huge <code>k</code> the vote includes samples that aren't
+    similar at all (too lazy). And <code>k</code> can't be bigger than the number of training
+    samples:
+  </p>
+
+  <div class="cell error-demo">
+    <textarea>
+too_many = KNeighborsClassifier(n_neighbors=500)
+too_many.fit(X_train, y_train)          # only 426 training samples
+too_many.predict(X_test)</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p class="muted small">Read the last line: <em>Expected n_neighbors &lt;= n_samples_fit</em>. You can't ask 500 neighbours when only 426 exist.</p>
+
+
+  <!-- =============================================================
+       SCALING
+       ============================================================= -->
+  <h2>⚖️ Why features must be on the same scale</h2>
+  <p>
+    "Closest" is measured as a distance, by adding up the differences in every feature. Now
+    remember the sizes: a difference in <em>area</em> can be hundreds, a difference in
+    <em>smoothness</em> is about 0.01. So KNN on all 30 raw features basically only looks at
+    area and ignores the rest. It's like comparing people by their salary in cents and their
+    height in kilometres.
+  </p>
+  <p>
+    The fix is <strong>scaling</strong>: rewrite each feature so that it has mean 0 and standard
+    deviation 1 (Day 9: <code>std</code> measures the typical spread). Then a "big difference"
+    means the same for every feature. <code>StandardScaler</code> does it:
+  </p>
+
+  <div class="cell">
+    <textarea>
+from sklearn.preprocessing import StandardScaler
+
+scaler = StandardScaler()
+scaler.fit(X_train)    # learn each column's mean and std (training set!)
+X_train_scaled = scaler.transform(X_train)
+X_test_scaled = scaler.transform(X_test)    # same numbers on the test set
+
+print("Area before: ", X_train["mean area"].head(3).round(1).tolist())
+print("Area after:  ", X_train_scaled[:3, 3].round(2).tolist())
+print(f"Mean now: {X_train_scaled.mean():.1f}, std now: {X_train_scaled.std():.1f}")</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p class="note">
+    <strong>Fit the scaler on the training set only.</strong> The test set plays the role of
+    future data you haven't seen yet. If its numbers helped decide the mean and std, a little
+    of the "exam" would leak into the "practice", and your score would be too optimistic.
+  </p>
+  <p>Does it help? Compare KNN on raw and on scaled features:</p>
+
+  <div class="cell">
+    <textarea>
+raw_knn = KNeighborsClassifier(n_neighbors=5).fit(X_train, y_train)
+scaled_knn = KNeighborsClassifier(n_neighbors=5).fit(X_train_scaled, y_train)
+
+print(f"KNN on raw features:    {raw_knn.score(X_test, y_test):.1%}")
+print(f"KNN on scaled features: {scaled_knn.score(X_test_scaled, y_test):.1%}")</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+
+  <!-- =============================================================
+       PIPELINES
+       ============================================================= -->
+  <h2>🔗 Pipelines: scaling and model in one</h2>
+  <p>
+    Remembering to scale the training set, then the test set, then every new sample, is
+    easy to get wrong. A <strong>pipeline</strong> glues the steps together into one model.
+    When you call <code>fit</code>, it fits the scaler and then the model on the training data;
+    when you call <code>predict</code> or <code>score</code>, it scales the new data first,
+    automatically:
+  </p>
+
+  <div class="cell">
+    <textarea>
+from sklearn.pipeline import make_pipeline
+
+knn_pipe = make_pipeline(StandardScaler(), KNeighborsClassifier(n_neighbors=5))
+knn_pipe.fit(X_train, y_train)     # raw data in, scaling happens inside
+print(f"KNN pipeline: {knn_pipe.score(X_test, y_test):.1%}")</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    Logistic regression likes scaled features too. Without scaling, it has trouble finding
+    its best slopes on all 30 features and stops after its limit of tries
+    (<code>max_iter</code>, 100 by default) with a warning. Run this box and read the yellow
+    message:
+  </p>
+
+  <div class="cell">
+    <textarea>
+unscaled = LogisticRegression()
+unscaled.fit(X_train, y_train)
+print(f"Logistic regression, raw features: {unscaled.score(X_test, y_test):.1%}")</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    "Failed to converge" means "I ran out of tries before I was done". You could allow more
+    tries with <code>LogisticRegression(max_iter=5000)</code>, but that's slow. Scaling fixes
+    the cause:
+  </p>
+
+  <div class="cell">
+    <textarea>
+logistic_pipe = make_pipeline(StandardScaler(), LogisticRegression())
+logistic_pipe.fit(X_train, y_train)
+print(f"Logistic regression pipeline: {logistic_pipe.score(X_test, y_test):.1%}")</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+
+  <!-- =============================================================
+       CHOOSING K
+       ============================================================= -->
+  <h2>🔢 Trying several values of <code>k</code></h2>
+  <p>A loop (Day 5) tries several <code>k</code> values and keeps every score in a dictionary (Day 3):</p>
+
+  <div class="cell">
+    <textarea>
+k_scores = {}
+for k in [1, 3, 5, 7, 9, 15, 25]:
+    pipe = make_pipeline(StandardScaler(), KNeighborsClassifier(n_neighbors=k))
+    pipe.fit(X_train, y_train)
+    k_scores[k] = pipe.score(X_test, y_test)
+    print(f"k = {k:2}: {k_scores[k]:.1%}")
+
+best_k = max(k_scores, key=k_scores.get)
+print("Best k:", best_k)</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    <code>max(k_scores, key=k_scores.get)</code> finds the key whose value is biggest (Day 6's
+    <code>key=</code> trick). If several <code>k</code> tie, it returns the first one.
+    The middle values work best: <code>k=1</code> is too nervous, <code>k=25</code> too lazy.
+  </p>
+  <p class="muted small">
+    Honest note: choosing <code>k</code> by looking at the test score lets the test set
+    influence the model a little. On Day 20 you'll learn cross-validation, the proper way to
+    choose settings.
+  </p>
+
+
+  <!-- =============================================================
+       COMPARING MODELS
+       ============================================================= -->
+  <h2>🏁 Comparing models fairly</h2>
+  <p>
+    A fair comparison uses the <strong>same</strong> training and test sets for every model,
+    plus a baseline (Day 16). A dictionary of models and a loop keep it tidy:
+  </p>
+
+  <div class="cell">
+    <textarea>
+from sklearn.dummy import DummyClassifier
+
+models = {
+    "baseline": DummyClassifier(strategy="most_frequent"),
+    "logistic": make_pipeline(StandardScaler(), LogisticRegression()),
+    "knn": make_pipeline(StandardScaler(), KNeighborsClassifier(n_neighbors=best_k)),
+}
+
+results = {}
+for name, m in models.items():
+    m.fit(X_train, y_train)
+    results[name] = m.score(X_test, y_test)
+
+pd.Series(results).sort_values(ascending=False).round(3)</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    Both real models beat the baseline (which always says "benign") by a wide margin, and with
+    scaling they are close to each other. When two models score about the same, people
+    often pick the simpler one, or the one whose probabilities are more useful.
+  </p>
+
+
+  <!-- =============================================================
+       COMMON MISTAKES + RECAP
+       ============================================================= -->
+  <h2>⚠️ Common mistakes</h2>
+  <ul>
+    <li>Thinking logistic <em>regression</em> predicts numbers. It's a classifier that gives probabilities.</li>
+    <li>Forgetting that <code>predict_proba</code> has one column per class: <code>[:, 1]</code> is the chance of class 1.</li>
+    <li>Using KNN (or logistic regression) on features with very different scales. Scale first.</li>
+    <li>Fitting the scaler on all the data, or on the test set. Fit it on the training set only (a pipeline does this for you).</li>
+    <li>Choosing <code>n_neighbors</code> bigger than the training set → <code>ValueError</code>.</li>
+    <li>Comparing models that were tested on different splits.</li>
+  </ul>
+
+  <h2>✅ Recap</h2>
+  <ul>
+    <li><code>LogisticRegression</code>: a weighted sum squeezed into a probability. <code>predict_proba</code> gives the chances, <code>predict</code> uses a 0.5 threshold.</li>
+    <li>Your own threshold: <code>model.predict_proba(X)[:, 1] &gt;= 0.9</code>.</li>
+    <li>KNN: the <code>k</code> closest training samples vote. Small <code>k</code> = nervous, big <code>k</code> = lazy.</li>
+    <li><code>StandardScaler</code> gives every feature mean 0 and std 1. Fit on the training set only.</li>
+    <li><code>make_pipeline(StandardScaler(), model)</code> scales and models in one step.</li>
+    <li>Compare models on the same split, with a baseline.</li>
+  </ul>
+
+
+  <!-- =============================================================
+       EXERCISES
+       Each exercise has: a task, a starting code box, hints,
+       hidden tests (<script class="tests">) and a solution
+       (<script class="solution">). The tests are Python "assert" lines
+       and can look at the variables the answer created.
+       ============================================================= -->
+  <h2>🏋️ Exercises</h2>
+  <p class="screen-only">
+    Write your answer in the box and click <strong>✓ Check my answer</strong>. Stuck? Use the
+    hints. After 3 tries you can see a solution. Each exercise box starts from its own data,
+    because exercises don't see the lesson's variables.
+  </p>
+  <p class="print-only">
+    Write your answer in the space under each exercise. Try it on the computer too, by opening
+    this day's <code>index.html</code>. Solutions are in the answer key at the end.
+  </p>
+
+  <div class="score">
+    <div class="bar"><div id="score-bar"></div></div>
+    <span id="score-text" class="muted small">0 / 5 done</span>
+  </div>
+
+
+  <!-- Exercise 1 -->
+  <section class="exercise" id="logistic-fit">
+    <h3>1. A first logistic regression</h3>
+    <p>
+      Train a <code>LogisticRegression</code> called <code>model</code> on the two features in
+      <code>two</code> (training set only), and store its accuracy on the test set in
+      <code>accuracy</code>.
+    </p>
+    <textarea>
+from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+
+cancer = load_breast_cancer(as_frame=True)
+X, y = cancer.data, cancer.target
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.3, random_state=42, stratify=y)
+two = ["mean radius", "mean texture"]
+
+# model = ...
+# accuracy = ...
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden>Only the two columns: <code>X_train[two]</code> and <code>X_test[two]</code>.</li>
+      <li hidden><code>model = LogisticRegression()</code>, then <code>model.fit(X_train[two], y_train)</code>.</li>
+      <li hidden><code>accuracy = model.score(X_test[two], y_test)</code></li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+assert "model" in globals(), "Create a variable called model."
+assert isinstance(model, LogisticRegression), "model should be a LogisticRegression()."
+assert hasattr(model, "coef_"), "The model isn't fitted yet. Call model.fit(...)."
+assert model.n_features_in_ == 2, f"Train on the 2 features in two (X_train[two]), not on {model.n_features_in_} features."
+assert "accuracy" in globals(), "Create a variable called accuracy."
+expected = model.score(X_test[two], y_test)
+assert abs(accuracy - expected) < 1e-9, f"accuracy should be the score on the test set ({expected:.3f}), but it is {accuracy}."
+assert accuracy > 0.8, f"The accuracy is only {accuracy:.0%}. Did you fit on the training set?"
+</script>
+<script type="text/python" class="solution">
+from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+
+cancer = load_breast_cancer(as_frame=True)
+X, y = cancer.data, cancer.target
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.3, random_state=42, stratify=y)
+two = ["mean radius", "mean texture"]
+
+model = LogisticRegression()
+model.fit(X_train[two], y_train)
+accuracy = model.score(X_test[two], y_test)
+print(f"Accuracy: {accuracy:.1%}")
+</script>
+  </section>
+
+
+  <!-- Exercise 2 -->
+  <section class="exercise" id="probabilities">
+    <h3>2. How sure is the model?</h3>
+    <p>
+      The starter trains a scaled logistic regression on all 30 features. Store the chance of
+      <strong>benign</strong> (class 1) for every test sample in <code>chance_benign</code>. Then
+      store in <code>sure_count</code> how many test samples have a chance of benign of
+      <strong>at least 0.9</strong>.
+    </p>
+    <textarea>
+from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
+
+cancer = load_breast_cancer(as_frame=True)
+X, y = cancer.data, cancer.target
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.3, random_state=42, stratify=y)
+model = make_pipeline(StandardScaler(), LogisticRegression())
+model.fit(X_train, y_train)
+
+# chance_benign = ...
+# sure_count = ...
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden><code>model.predict_proba(X_test)</code> has two columns: [malignant, benign].</li>
+      <li hidden>Column 1 of every row: <code>[:, 1]</code>.</li>
+      <li hidden><code>(chance_benign &gt;= 0.9)</code> gives True/False; <code>.sum()</code> counts the Trues.</li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+import numpy as np
+assert "chance_benign" in globals(), "Create a variable called chance_benign."
+expected = model.predict_proba(X_test)[:, 1]
+assert len(chance_benign) == len(X_test), f"chance_benign should have one value per test sample ({len(X_test)}), but it has {len(chance_benign)}. Did you take one column with [:, 1]?"
+assert np.ndim(chance_benign) == 1, "chance_benign should be a single column. Use [:, 1]."
+assert np.allclose(chance_benign, expected), "chance_benign should be column 1 (benign) of predict_proba(X_test), not column 0."
+assert "sure_count" in globals(), "Create a variable called sure_count."
+exp_count = int((expected >= 0.9).sum())
+assert sure_count == exp_count, f"sure_count should be {exp_count}, but it is {sure_count}. Count values that are at least 0.9 (>=)."
+assert "0.9" in __code__, "Count with a comparison like chance_benign >= 0.9."
+</script>
+<script type="text/python" class="solution">
+from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
+
+cancer = load_breast_cancer(as_frame=True)
+X, y = cancer.data, cancer.target
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.3, random_state=42, stratify=y)
+model = make_pipeline(StandardScaler(), LogisticRegression())
+model.fit(X_train, y_train)
+
+chance_benign = model.predict_proba(X_test)[:, 1]
+sure_count = (chance_benign >= 0.9).sum()
+print(sure_count, "of", len(X_test), "samples are at least 90% benign")
+</script>
+  </section>
+
+
+  <!-- Exercise 3 -->
+  <section class="exercise" id="scaled-knn">
+    <h3>3. Scaled KNN</h3>
+    <p>
+      Build a pipeline called <code>model</code> that first scales the features with
+      <code>StandardScaler</code> and then uses <code>KNeighborsClassifier(n_neighbors=5)</code>.
+      Fit it on the training set and store its test accuracy in <code>accuracy</code>.
+    </p>
+    <textarea>
+from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
+
+cancer = load_breast_cancer(as_frame=True)
+X, y = cancer.data, cancer.target
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.3, random_state=42, stratify=y)
+
+# model = make_pipeline(...)
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden>The steps go inside <code>make_pipeline( , )</code> in order: scaler first, then the model.</li>
+      <li hidden><code>model = make_pipeline(StandardScaler(), KNeighborsClassifier(n_neighbors=5))</code></li>
+      <li hidden>Then <code>model.fit(X_train, y_train)</code> and <code>accuracy = model.score(X_test, y_test)</code>.</li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+from sklearn.pipeline import Pipeline
+assert "model" in globals(), "Create a variable called model."
+assert isinstance(model, Pipeline), "model should be a pipeline made with make_pipeline(...)."
+steps = [type(step).__name__ for step in model.named_steps.values()]
+assert steps == ["StandardScaler", "KNeighborsClassifier"], f"The pipeline should be StandardScaler then KNeighborsClassifier, but it is {steps}."
+assert model[-1].n_neighbors == 5, "Use n_neighbors=5."
+assert hasattr(model[-1], "classes_"), "The pipeline isn't fitted yet. Call model.fit(X_train, y_train)."
+assert "accuracy" in globals(), "Create a variable called accuracy."
+expected = model.score(X_test, y_test)
+assert abs(accuracy - expected) < 1e-9, f"accuracy should be the score on the test set ({expected:.3f}), but it is {accuracy}."
+assert accuracy >= 0.95, f"The accuracy is only {accuracy:.0%}. Did you fit on the training set?"
+</script>
+<script type="text/python" class="solution">
+from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
+
+cancer = load_breast_cancer(as_frame=True)
+X, y = cancer.data, cancer.target
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.3, random_state=42, stratify=y)
+
+model = make_pipeline(StandardScaler(), KNeighborsClassifier(n_neighbors=5))
+model.fit(X_train, y_train)
+accuracy = model.score(X_test, y_test)
+print(f"Accuracy: {accuracy:.1%}")
+</script>
+  </section>
+
+
+  <!-- Exercise 4 -->
+  <section class="exercise" id="best-k">
+    <h3>4. Find the best k</h3>
+    <p>
+      For each <code>k</code> in <code>[1, 3, 5, 7, 9, 11]</code>, fit a scaled KNN pipeline and
+      store its test accuracy in a dictionary called <code>scores</code> (key = k, value =
+      accuracy). Then store the <code>k</code> with the highest accuracy in <code>best_k</code>.
+    </p>
+    <textarea>
+from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
+
+cancer = load_breast_cancer(as_frame=True)
+X, y = cancer.data, cancer.target
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.3, random_state=42, stratify=y)
+
+scores = {}
+# loop over the k values here
+
+# best_k = ...
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden><code>for k in [1, 3, 5, 7, 9, 11]:</code> and inside it build a new pipeline with <code>KNeighborsClassifier(n_neighbors=k)</code>.</li>
+      <li hidden>Inside the loop: fit it, then <code>scores[k] = pipe.score(X_test, y_test)</code>.</li>
+      <li hidden><code>best_k = max(scores, key=scores.get)</code></li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+assert "scores" in globals() and isinstance(scores, dict), "Keep the dictionary called scores."
+assert sorted(scores) == [1, 3, 5, 7, 9, 11], f"scores should have the keys 1, 3, 5, 7, 9, 11, but it has {sorted(scores)}."
+for k in [1, 3, 5, 7, 9, 11]:
+    pipe = make_pipeline(StandardScaler(), KNeighborsClassifier(n_neighbors=k)).fit(X_train, y_train)
+    exp = pipe.score(X_test, y_test)
+    assert abs(scores[k] - exp) < 1e-9, f"scores[{k}] should be the test accuracy of a scaled KNN with k={k} ({exp:.3f}), but it is {scores[k]}."
+assert "best_k" in globals(), "Create a variable called best_k."
+assert best_k in scores and scores[best_k] == max(scores.values()), f"best_k should be a k with the highest accuracy ({max(scores.values()):.3f}), but scores[{best_k}] is lower."
+assert "for " in __code__, "Use a for loop to try the k values."
+</script>
+<script type="text/python" class="solution">
+from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
+
+cancer = load_breast_cancer(as_frame=True)
+X, y = cancer.data, cancer.target
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.3, random_state=42, stratify=y)
+
+scores = {}
+for k in [1, 3, 5, 7, 9, 11]:
+    pipe = make_pipeline(StandardScaler(), KNeighborsClassifier(n_neighbors=k))
+    pipe.fit(X_train, y_train)
+    scores[k] = pipe.score(X_test, y_test)
+
+best_k = max(scores, key=scores.get)
+print(scores)
+print("Best k:", best_k)
+</script>
+  </section>
+
+
+  <!-- Exercise 5 -->
+  <section class="exercise" id="compare">
+    <h3>5. Challenge: compare three models</h3>
+    <p>
+      Fit the three models in <code>models</code> on the same training set. Store each test
+      accuracy in a dictionary called <code>results</code> with the same keys
+      (<code>"baseline"</code>, <code>"logistic"</code>, <code>"knn"</code>). Then store the name of
+      the best model in <code>best_name</code> and print a line like
+      <code>Best: logistic (98.8%)</code>.
+    </p>
+    <p class="muted small">Your code should still work if someone adds a fourth model to the dictionary.</p>
+    <textarea>
+from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import train_test_split
+from sklearn.dummy import DummyClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
+
+cancer = load_breast_cancer(as_frame=True)
+X, y = cancer.data, cancer.target
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.3, random_state=42, stratify=y)
+
+models = {
+    "baseline": DummyClassifier(strategy="most_frequent"),
+    "logistic": make_pipeline(StandardScaler(), LogisticRegression()),
+    "knn": make_pipeline(StandardScaler(), KNeighborsClassifier(n_neighbors=7)),
+}
+
+# results = ...
+# best_name = ...
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden>Start with <code>results = {}</code> and loop with <code>for name, model in models.items():</code></li>
+      <li hidden>Inside the loop: <code>model.fit(X_train, y_train)</code> and <code>results[name] = model.score(X_test, y_test)</code>.</li>
+      <li hidden><code>best_name = max(results, key=results.get)</code>, then <code>print(f"Best: {best_name} ({results[best_name]:.1%})")</code></li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+assert "results" in globals() and isinstance(results, dict), "Create a dictionary called results."
+assert sorted(results) == sorted(models), f"results should have the keys {sorted(models)}, but it has {sorted(results)}."
+from sklearn.base import clone
+for name in models:
+    exp = clone(models[name]).fit(X_train, y_train).score(X_test, y_test)
+    assert abs(results[name] - exp) < 1e-9, f"results[{name!r}] should be that model's test accuracy ({exp:.3f}), but it is {results[name]}."
+assert "best_name" in globals(), "Create a variable called best_name."
+top = max(results.values())
+assert best_name in results and results[best_name] == top, f"best_name should be the model with the highest accuracy ({top:.3f})."
+assert "for " in __code__ and ".items()" in __code__, "Loop over models.items(), so the code works for any number of models."
+line = f"Best: {best_name} ({results[best_name]:.1%})"
+assert line in __lines__, f"Print the line exactly like: {line}"
+</script>
+<script type="text/python" class="solution">
+from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import train_test_split
+from sklearn.dummy import DummyClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
+
+cancer = load_breast_cancer(as_frame=True)
+X, y = cancer.data, cancer.target
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.3, random_state=42, stratify=y)
+
+models = {
+    "baseline": DummyClassifier(strategy="most_frequent"),
+    "logistic": make_pipeline(StandardScaler(), LogisticRegression()),
+    "knn": make_pipeline(StandardScaler(), KNeighborsClassifier(n_neighbors=7)),
+}
+
+results = {}
+for name, model in models.items():
+    model.fit(X_train, y_train)
+    results[name] = model.score(X_test, y_test)
+
+best_name = max(results, key=results.get)
+print(f"Best: {best_name} ({results[best_name]:.1%})")
+</script>
+  </section>
+
+
+  <!-- Shown when all exercises are done -->
+  <section id="finished" class="finished" hidden>
+    <h2>🏆 Day 18 complete!</h2>
+    <p>
+      You can now get probabilities from a classifier, scale features properly, build
+      pipelines and compare models fairly. That's a real data scientist's toolkit!
+    </p>
+  </section>
+
+
+  <!-- =============================================================
+       TOMORROW
+       ============================================================= -->
+  <h2>🔜 Tomorrow</h2>
+  <p>
+    <strong>Decision trees and random forests.</strong> A decision tree classifies like a game
+    of 20 questions ("Is the alcohol above 13? Then is the colour…"), and you can read its
+    rules in plain text. You'll see how deep trees memorise, and how a whole "forest" of trees
+    voting together gives steadier answers, using a dataset of wines.
+  </p>
+
+
+  <footer class="screen-only">
+    <p>
+      Your answers are saved in this browser only. Python downloads the first time you open
+      the page, so you need an internet connection.
+    </p>
+    <button id="erase-progress" class="quiet">Erase my answers for this day</button>
+  </footer>
+
+</main>
+
+<!-- Shows whether Python is loading or ready -->
+<div id="python-status" role="status"></div>
+
+<script src="script.js"></script>
+</body>
+</html>

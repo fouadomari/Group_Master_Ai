@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Day 30: Capstone: review analyzer + what next · PyPath</title>
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Python for the browser (Pyodide). Downloaded the first time, then cached. -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v314.0.7/full/pyodide.js"></script>
+</head>
+
+<body data-day="day30">
+<main>
+
+  <!-- =============================================================
+       HEADER
+       ============================================================= -->
+  <header class="lesson-header">
+    <p class="muted small">NLP · Day 30 of 30 · about 60 minutes</p>
+    <h1>Capstone: review analyzer + what next</h1>
+    <div class="tools">
+      <button id="reset-variables" class="quiet" title="Forget all variables created by this page's code boxes">↺ Forget variables</button>
+    </div>
+  </header>
+
+
+  <!-- =============================================================
+       TODAY'S GOAL
+       ============================================================= -->
+  <h2>🎯 Today's goal</h2>
+  <p>On the last day of PyPath you will:</p>
+  <ul>
+    <li>build a complete <strong>review analyzer</strong>, step by step, from pieces you already know</li>
+    <li>combine text cleaning (Day 27), TF-IDF (Day 28) and the sentiment classifier (Day 29)</li>
+    <li>wrap everything in one <code>analyze()</code> function that returns a dictionary of results</li>
+    <li>turn the results into a printed report and a chart</li>
+    <li>look back at 30 days of learning, and plan what to learn next</li>
+  </ul>
+
+
+  <!-- =============================================================
+       WHY THIS MATTERS
+       ============================================================= -->
+  <h2>🤔 Why this matters</h2>
+  <p>
+    Imagine the manager of our made-up online shop. Every Monday she wants to know: <em>How
+    happy were customers last week? What do happy customers like? What do unhappy customers
+    complain about?</em> She doesn't want to read every review, and she doesn't want to run ten
+    code boxes. She wants <strong>one call that gives an answer</strong>.
+  </p>
+  <p>
+    That's what a <strong>capstone</strong> is: a final project that joins everything together.
+    Real data work looks exactly like this. Small, tested pieces (cleaning, a model, a few
+    counts) are combined into a tool that someone else can use with one line.
+  </p>
+  <p class="note screen-only">
+    <strong>Remember:</strong> the code boxes on this page share their variables, like pages of
+    one notebook. Run them <strong>from top to bottom</strong>. If you see a <code>NameError</code>,
+    you probably skipped a box above.
+  </p>
+
+
+  <!-- =============================================================
+       STEP 1: TRAINING DATA AND MODEL
+       ============================================================= -->
+  <h2>🏷️ Step 1: the training data</h2>
+  <p>
+    These are the same 80 <strong>made-up</strong> labelled reviews as yesterday. They teach our
+    model what positive and negative reviews look like:
+  </p>
+
+  <div class="cell">
+    <textarea>
+# 80 made-up reviews from a made-up online shop (invented for this lesson)
+labelled_reviews = [
+    ("Great sound and the battery lasts all day", "positive"),
+    ("I love these headphones, so comfortable", "positive"),
+    ("Fast delivery and excellent quality", "positive"),
+    ("Works perfectly, I would buy it again", "positive"),
+    ("Excellent value, great price", "positive"),
+    ("The kettle is fast and looks lovely", "positive"),
+    ("Really happy with this lamp, lovely warm light", "positive"),
+    ("Best backpack I have ever owned, love it", "positive"),
+    ("Strong and light, great for travel", "positive"),
+    ("The blender is powerful and easy to clean", "positive"),
+    ("Great phone case, fits perfectly", "positive"),
+    ("Comfortable shoes, I wear them every day", "positive"),
+    ("Great gift, my sister loved it", "positive"),
+    ("Arrived early and works great", "positive"),
+    ("Fast charger, highly recommend", "positive"),
+    ("Beautiful colour and soft fabric, love it", "positive"),
+    ("The keyboard is excellent and quiet", "positive"),
+    ("Amazing picture quality, really happy", "positive"),
+    ("Easy to set up, the app is simple and good", "positive"),
+    ("Good quality for a low price", "positive"),
+    ("Not bad at all, does the job well", "positive"),
+    ("Really good, better than I expected", "positive"),
+    ("Perfect size and well made", "positive"),
+    ("The coffee machine is excellent, great taste", "positive"),
+    ("Happy with my purchase, nice and sturdy", "positive"),
+    ("Lovely mug, keeps my tea hot", "positive"),
+    ("The speaker is loud and clear, love it", "positive"),
+    ("Five stars, excellent customer service", "positive"),
+    ("Cheap but works really well", "positive"),
+    ("Exactly as described, very happy", "positive"),
+    ("Smooth, quiet and fast, I love it", "positive"),
+    ("Great for running, light and comfortable", "positive"),
+    ("My kids love this game", "positive"),
+    ("Nice design and the battery is great", "positive"),
+    ("The best toaster I have had, works perfectly", "positive"),
+    ("The watch looks great and works well", "positive"),
+    ("Sturdy table, easy to build, recommend", "positive"),
+    ("I recommend it to everyone, great buy", "positive"),
+    ("The pillow is soft and comfortable", "positive"),
+    ("Good sound, good price, happy customer", "positive"),
+    ("Terrible quality, it broke after a week", "negative"),
+    ("The battery is poor and dies after two hours", "negative"),
+    ("Not good, the sound is poor", "negative"),
+    ("Arrived late and the box was broken", "negative"),
+    ("Waste of money, do not buy", "negative"),
+    ("The kettle leaks, terrible", "negative"),
+    ("Very disappointed, it stopped working", "negative"),
+    ("Cheap plastic, it broke on day one", "negative"),
+    ("The app keeps crashing, useless", "negative"),
+    ("Too small and uncomfortable, returned it", "negative"),
+    ("Poor quality, the strap broke", "negative"),
+    ("The charger is slow and stopped working", "negative"),
+    ("Awful customer service, never replied", "negative"),
+    ("Not worth the price, disappointed", "negative"),
+    ("The colour faded after one wash, poor", "negative"),
+    ("Terrible screen, the picture is blurry", "negative"),
+    ("Returned it, the worst blender I have used", "negative"),
+    ("The shoes are uncomfortable and hurt my feet", "negative"),
+    ("Noisy fan and the remote is useless", "negative"),
+    ("Broken on arrival, very disappointed", "negative"),
+    ("The lamp is awful and the light is cold", "negative"),
+    ("Bad smell and the fabric is rough", "negative"),
+    ("Hard to set up, the instructions are useless", "negative"),
+    ("The speaker is terrible at high volume", "negative"),
+    ("I would not recommend this, awful", "negative"),
+    ("The mug broke in the dishwasher", "negative"),
+    ("Slow delivery and the wrong size", "negative"),
+    ("The keyboard is bad and some keys stick", "negative"),
+    ("Stopped working after a month, waste of money", "negative"),
+    ("Awful taste, the coffee machine leaks", "negative"),
+    ("Poor table, it wobbles", "negative"),
+    ("The game is boring, a waste", "negative"),
+    ("Overpriced and badly made, disappointed", "negative"),
+    ("The backpack zip broke, terrible", "negative"),
+    ("Disappointed, it looks nothing like the photo", "negative"),
+    ("The pillow is too hard and uncomfortable", "negative"),
+    ("Not happy, the watch stopped working", "negative"),
+    ("Uncomfortable and the sound is poor", "negative"),
+    ("The toaster is the worst, returned it", "negative"),
+    ("Bad quality, bad price, unhappy customer", "negative"),
+]
+
+texts = [text for text, label in labelled_reviews]
+labels = [label for text, label in labelled_reviews]
+print(len(texts), "labelled reviews:", labels.count("positive"), "positive,", labels.count("negative"), "negative")</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+
+  <h2>🧠 Step 2: train the final model</h2>
+  <p>
+    Yesterday we kept 20 reviews aside and measured an accuracy of 95% on them. Now that we
+    trust the recipe, we train the final model on <strong>all 80</strong> reviews: more examples
+    means a better model. (This is normal practice: test first, then train the version you use
+    on everything you have.)
+  </p>
+
+  <div class="cell">
+    <textarea>
+from sklearn.pipeline import make_pipeline
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+
+model = make_pipeline(TfidfVectorizer(), LogisticRegression())
+model.fit(texts, labels)
+
+print("Trained on", len(texts), "reviews. Classes:", model.classes_)</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+
+  <!-- =============================================================
+       STEP 3: CLEANING FOR KEYWORDS
+       ============================================================= -->
+  <h2>🧼 Step 3: a cleaning function for keywords</h2>
+  <p>
+    To find out <em>what</em> customers talk about, we'll count words, just like on Day 27.
+    This time we borrow scikit-learn's English stop-word list (the one behind
+    <code>stop_words="english"</code> on Day 28). It's a ready-made set of 318 words.
+    We don't stem here, because the manager should read real words like <em>battery</em>, not
+    <em>batteri</em>.
+  </p>
+
+  <div class="cell">
+    <textarea>
+import re
+from collections import Counter
+from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
+
+def clean_text(text):
+    """Lowercase, find the words, drop stop words."""
+    words = re.findall(r"[a-z']+", text.lower())
+    return [w for w in words if w not in ENGLISH_STOP_WORDS]
+
+print(len(ENGLISH_STOP_WORDS), "stop words")
+print(clean_text("The sound is GREAT and the battery lasts for days!"))</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+
+  <!-- =============================================================
+       STEP 4: THIS WEEK'S REVIEWS
+       ============================================================= -->
+  <h2>📬 Step 4: this week's new reviews</h2>
+  <p>
+    Here are 12 new <strong>made-up</strong> reviews that arrived this week. The model has never
+    seen them, and they have no labels: that's the model's job. For each review we ask for the
+    label and for the chance that it's positive:
+  </p>
+
+  <div class="cell">
+    <textarea>
+import pandas as pd
+
+# 12 new made-up reviews (no labels)
+new_batch = [
+    "The sound is great and the battery lasts for days",
+    "Terrible battery, it dies after two hours",
+    "Lovely design, I love the colour",
+    "Delivery was slow and the box was broken",
+    "Excellent sound, fast delivery",
+    "Poor battery and the handle broke",
+    "Comfortable and light, great sound",
+    "Waste of money, the battery is useless",
+    "Really happy, great design",
+    "Slow delivery, very disappointed",
+    "Great value, the sound is excellent",
+    "The screen is blurry and the battery is poor",
+]
+
+table = pd.DataFrame({
+    "review": new_batch,
+    "sentiment": model.predict(new_batch),
+    "chance positive": model.predict_proba(new_batch)[:, 1].round(2),
+})
+table</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p class="muted small">
+    <code>[:, 1]</code> takes every row of column 1, which is <code>"positive"</code> in
+    <code>model.classes_</code>.
+  </p>
+
+
+  <!-- =============================================================
+       STEP 5: SHARE AND KEYWORDS
+       ============================================================= -->
+  <h2>📊 Step 5: the share of happy customers</h2>
+
+  <div class="cell">
+    <textarea>
+predicted = list(model.predict(new_batch))
+
+positive_count = predicted.count("positive")
+positive_share = positive_count / len(predicted) * 100
+print(f"{positive_count} of {len(predicted)} reviews are positive: {positive_share:.1f}%")</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <h2>🔑 Step 6: top keywords per sentiment</h2>
+  <p>
+    Now split the reviews by their predicted label and count the cleaned words in each group.
+    A small helper function keeps this tidy:
+  </p>
+
+  <div class="cell">
+    <textarea>
+def top_keywords(reviews, n=3):
+    """The n most common cleaned words in a list of reviews."""
+    counts = Counter()
+    for review in reviews:
+        counts.update(clean_text(review))
+    return [word for word, count in counts.most_common(n)]
+
+happy = [r for r, label in zip(new_batch, predicted) if label == "positive"]
+unhappy = [r for r, label in zip(new_batch, predicted) if label == "negative"]
+
+print("Happy customers mention:  ", top_keywords(happy))
+print("Unhappy customers mention:", top_keywords(unhappy))</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    There's the answer for the manager: people love the <strong>sound</strong> and the
+    <strong>design</strong>, and they complain about the <strong>battery</strong> and slow
+    <strong>delivery</strong>.
+  </p>
+
+
+  <!-- =============================================================
+       STEP 7: ONE FUNCTION
+       ============================================================= -->
+  <h2>🧩 Step 7: everything in one <code>analyze()</code> function</h2>
+  <p>
+    Now we wrap steps 4–6 into one function (Day 6) that returns a <strong>dictionary</strong>
+    (Day 3) of results. A dictionary is perfect here: each result gets a clear name. If the list
+    is empty we <code>raise</code> an error with a helpful message (Day 7) instead of dividing by
+    zero.
+  </p>
+
+  <div class="cell">
+    <textarea>
+def analyze(reviews):
+    """Predict the sentiment of each review and summarise the batch."""
+    if len(reviews) == 0:
+        raise ValueError("There are no reviews to analyze.")
+
+    # str() turns NumPy's text values into plain Python text, so they print neatly
+    predicted = [str(label) for label in model.predict(reviews)]
+    happy = [r for r, label in zip(reviews, predicted) if label == "positive"]
+    unhappy = [r for r, label in zip(reviews, predicted) if label == "negative"]
+
+    return {
+        "count": len(reviews),
+        "positive": len(happy),
+        "negative": len(unhappy),
+        "positive_share": len(happy) / len(reviews) * 100,
+        "labels": predicted,
+        "top_positive": top_keywords(happy),
+        "top_negative": top_keywords(unhappy),
+    }
+
+result = analyze(new_batch)
+for key, value in result.items():
+    print(f"{key:15} {value}")</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>Dictionary keys must be spelled exactly. Asking for a key that doesn't exist fails:</p>
+
+  <div class="cell error-demo">
+    <textarea>
+print(result["positive_percent"])</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    <code>KeyError: 'positive_percent'</code>: the key is called <code>"positive_share"</code>.
+    When in doubt, <code>print(result.keys())</code>.
+  </p>
+
+
+  <!-- =============================================================
+       STEP 8: REPORT AND CHART
+       ============================================================= -->
+  <h2>📝 Step 8: a report and a chart</h2>
+  <p>
+    The manager wants words, not a dictionary. A <code>report()</code> function turns the results
+    into neat lines with f-strings (Day 2). <code>", ".join(list)</code> glues the words of a list
+    into one text, with a comma and a space between them:
+  </p>
+
+  <div class="cell">
+    <textarea>
+def report(result):
+    print("===== Weekly review report =====")
+    print(f"Reviews analysed:  {result['count']}")
+    print(f"Positive:          {result['positive']} ({result['positive_share']:.1f}%)")
+    print(f"Negative:          {result['negative']}")
+    print(f"Customers like:    {', '.join(result['top_positive'])}")
+    print(f"Customers dislike: {', '.join(result['top_negative'])}")
+
+report(result)</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p class="muted small">
+    Inside an f-string that uses double quotes, write the dictionary keys with single quotes:
+    <code>result['count']</code>. (Python 3.12 and newer also accept double quotes there, but
+    older versions stop with a <code>SyntaxError</code>.)
+  </p>
+
+  <p>And a picture (Day 13), with two charts side by side:</p>
+
+  <div class="cell">
+    <textarea>
+import matplotlib.pyplot as plt
+
+fig, (left, right) = plt.subplots(1, 2, figsize=(9, 3.5))
+
+left.bar(["positive", "negative"], [result["positive"], result["negative"]],
+         color=["tab:green", "tab:red"])
+left.set_title(f"Sentiment of {result['count']} new reviews")
+left.set_ylabel("Number of reviews")
+
+unhappy_counts = Counter()
+for review, label in zip(new_batch, result["labels"]):
+    if label == "negative":
+        unhappy_counts.update(clean_text(review))
+words, counts = zip(*unhappy_counts.most_common(5))
+right.barh(words[::-1], counts[::-1], color="tab:red")
+right.set_title("What unhappy customers mention")
+right.set_xlabel("Times mentioned")
+
+plt.tight_layout()
+plt.show()</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p class="muted small">
+    <code>zip(*pairs)</code> does the opposite of <code>zip</code>: it turns a list of
+    <code>(word, count)</code> pairs into one tuple of words and one tuple of counts.
+  </p>
+
+  <p>
+    Our analyzer is done. Try it with your own reviews: change the texts, add more, and run
+    the box again.
+  </p>
+
+  <div class="cell">
+    <textarea>
+my_reviews = [
+    "I love this keyboard, excellent and quiet",
+    "The charger broke after a week, awful",
+    "Great price and fast delivery",
+]
+
+report(analyze(my_reviews))</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p class="note">
+    <strong>Be honest about limits:</strong> our model learned from 80 made-up reviews. It will
+    miss sarcasm, "not bad" and words it has never seen (Day 29). Before a real shop relied on
+    it, we would train it on thousands of real, labelled reviews and test it again.
+  </p>
+
+
+  <!-- =============================================================
+       LOOKING BACK
+       ============================================================= -->
+  <h2>🎓 Looking back: 30 days of PyPath</h2>
+  <p>
+    Thirty days ago, <code>print("Hello, world!")</code> was new. Look at what you can do now:
+  </p>
+  <table>
+    <thead>
+      <tr><th>Phase</th><th>Days</th><th>What you learned</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Python Basics</strong></td><td>1–8</td>
+        <td>print and maths, variables and types, lists and dictionaries, if/else, loops,
+          functions, files, modules and errors. Project: an expense tracker.</td>
+      </tr>
+      <tr>
+        <td><strong>Data Science</strong></td><td>9–15</td>
+        <td>NumPy arrays, pandas tables (loading, filtering, grouping), cleaning messy data,
+          Matplotlib charts and exploratory data analysis. Project: ship passengers EDA.</td>
+      </tr>
+      <tr>
+        <td><strong>Machine Learning</strong></td><td>16–22</td>
+        <td>train/test splits, linear and logistic regression, KNN, decision trees and forests,
+          precision, recall and cross-validation, K-means clustering. Project: a survival predictor.</td>
+      </tr>
+      <tr>
+        <td><strong>Deep Learning</strong></td><td>23–26</td>
+        <td>a neuron from scratch, gradient descent, a 2-layer network, recognising handwritten
+          digits, overfitting and regularisation, a look at PyTorch and Keras.</td>
+      </tr>
+      <tr>
+        <td><strong>NLP</strong></td><td>27–30</td>
+        <td>cleaning and tokenising text, bag-of-words, TF-IDF, similarity search, a sentiment
+          classifier. Project: today's review analyzer.</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+    The most important skill isn't on the list: you've learned to <strong>read error
+    messages</strong>, break a problem into small steps, test each one, and check your results
+    instead of trusting them blindly. That's what programmers and data scientists do every day.
+  </p>
+
+
+  <!-- =============================================================
+       COMMON MISTAKES + RECAP
+       ============================================================= -->
+  <h2>⚠️ Common mistakes</h2>
+  <ul>
+    <li>Misspelling a dictionary key → <code>KeyError</code>. Check with <code>result.keys()</code>.</li>
+    <li>Dividing by <code>len(reviews)</code> when the list is empty → <code>ZeroDivisionError</code>. Check first, or <code>raise</code> a clear error.</li>
+    <li>Using double quotes for a key inside a double-quoted f-string: a <code>SyntaxError</code> before Python 3.12. Use <code>result['count']</code>, which works everywhere.</li>
+    <li>Fitting the model inside <code>analyze()</code>. Train once, outside; the function only predicts.</li>
+    <li>Trusting the tool more than the data it learned from.</li>
+  </ul>
+
+  <h2>✅ Recap</h2>
+  <ul>
+    <li>A capstone joins small, tested pieces into one tool: clean → vectorise → classify → summarise → report.</li>
+    <li>Train the final model on all the labelled data once you've tested the recipe.</li>
+    <li><code>analyze()</code> returns a dictionary, so every result has a name.</li>
+    <li><code>report()</code> and a chart turn numbers into something a person can act on.</li>
+    <li>Know the limits of your model, and say them out loud.</li>
+  </ul>
+
+
+  <!-- =============================================================
+       EXERCISES
+       Each exercise has: a task, a starting code box, hints,
+       hidden tests (<script class="tests">) and a solution
+       (<script class="solution">). The tests are Python "assert" lines
+       and can look at the variables the answer created.
+       ============================================================= -->
+  <h2>🏋️ Exercises</h2>
+  <p class="screen-only">
+    Write your answer in the box and click <strong>✓ Check my answer</strong>. Stuck? Use the
+    hints. After 3 tries you can see a solution.
+  </p>
+  <p class="print-only">
+    Write your answer in the space under each exercise. Try it on the computer too, by opening
+    this day's <code>index.html</code>. Solutions are in the answer key at the end.
+  </p>
+  <p>
+    Exercises 3 and 5 train a small model on the 24 made-up reviews from yesterday's exercises,
+    so the boxes stay short.
+  </p>
+
+  <div class="score">
+    <div class="bar"><div id="score-bar"></div></div>
+    <span id="score-text" class="muted small">0 / 5 done</span>
+  </div>
+
+
+  <!-- Exercise 1 -->
+  <section class="exercise" id="keyword-counts">
+    <h3>1. Count the keywords</h3>
+    <p>
+      Count every word in the reviews that is <strong>not</strong> a stop word, in a
+      <code>Counter</code> called <code>keyword_counts</code>. Then store the most common keyword
+      in <code>top_keyword</code>.
+    </p>
+    <textarea>
+from collections import Counter
+
+reviews = ["great sound and great battery", "the price is great", "sound is poor", "battery died fast"]
+stop_words = {"the", "and", "is", "a"}
+
+# Count the keywords, then store top_keyword
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden>Start with <code>keyword_counts = Counter()</code>, then loop over the reviews.</li>
+      <li hidden>For each review: <code>keyword_counts.update([w for w in review.split() if w not in stop_words])</code></li>
+      <li hidden><code>top_keyword = keyword_counts.most_common(1)[0][0]</code></li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+from collections import Counter as _Counter
+assert "keyword_counts" in globals(), "Create a variable called keyword_counts."
+assert "top_keyword" in globals(), "Create a variable called top_keyword."
+_want = _Counter()
+for _r in reviews:
+    _want.update([w for w in _r.split() if w not in stop_words])
+assert isinstance(keyword_counts, dict), "keyword_counts should be a Counter."
+assert not any(w in keyword_counts for w in stop_words), "keyword_counts still contains stop words. Skip the words in stop_words."
+assert dict(keyword_counts) == dict(_want), f"keyword_counts should be {dict(_want)}."
+assert top_keyword == _want.most_common(1)[0][0], f"top_keyword should be {_want.most_common(1)[0][0]!r}, but it is {top_keyword!r}."
+assert "Counter(" in __code__ and "stop_words" in __code__.split("# Count")[-1], "Use Counter and the stop_words set."
+</script>
+<script type="text/python" class="solution">
+from collections import Counter
+
+reviews = ["great sound and great battery", "the price is great", "sound is poor", "battery died fast"]
+stop_words = {"the", "and", "is", "a"}
+
+keyword_counts = Counter()
+for review in reviews:
+    keyword_counts.update([w for w in review.split() if w not in stop_words])
+
+top_keyword = keyword_counts.most_common(1)[0][0]
+print(keyword_counts)
+print(top_keyword)
+</script>
+  </section>
+
+
+  <!-- Exercise 2 -->
+  <section class="exercise" id="sentiment-share">
+    <h3>2. The share of happy customers</h3>
+    <p>
+      A model predicted these labels for eight reviews. Store the <strong>percentage</strong> of
+      positive labels (0 to 100) in <code>positive_share</code> and print it with one decimal,
+      like: <code>Positive: 62.5%</code>
+    </p>
+    <textarea>
+predicted = ["positive", "negative", "positive", "positive",
+             "negative", "positive", "negative", "positive"]
+
+# Store positive_share, then print it
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden><code>predicted.count("positive")</code> counts the positive labels.</li>
+      <li hidden><code>positive_share = predicted.count("positive") / len(predicted) * 100</code></li>
+      <li hidden><code>print(f"Positive: {positive_share:.1f}%")</code></li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+assert "positive_share" in globals(), "Create a variable called positive_share."
+_want = list(predicted).count("positive") / len(predicted) * 100
+assert abs(positive_share - _want / 100) > 1e-9, "positive_share should be a percentage (0 to 100), not a share (0 to 1). Multiply by 100."
+assert abs(positive_share - _want) < 1e-9, f"positive_share should be {_want}, but it is {positive_share}."
+assert f"Positive: {_want:.1f}%" in __lines__, f"Print it exactly like: Positive: {_want:.1f}%"
+assert "62.5" not in __code__, "Calculate the share from the list instead of typing it."
+</script>
+<script type="text/python" class="solution">
+predicted = ["positive", "negative", "positive", "positive",
+             "negative", "positive", "negative", "positive"]
+
+positive_share = predicted.count("positive") / len(predicted) * 100
+print(f"Positive: {positive_share:.1f}%")
+</script>
+  </section>
+
+
+  <!-- Exercise 3 -->
+  <section class="exercise" id="analyze-function">
+    <h3>3. A small <code>analyze()</code></h3>
+    <p>
+      Finish <code>analyze(reviews)</code>. It should use the trained <code>model</code> to predict
+      a label for every review and return a dictionary with these four keys:
+    </p>
+    <ul>
+      <li><code>"count"</code>: how many reviews there are,</li>
+      <li><code>"positive"</code> and <code>"negative"</code>: how many got each label,</li>
+      <li><code>"positive_share"</code>: the percentage of positive reviews (0 to 100).</li>
+    </ul>
+    <p>The checker will call it with several lists of reviews.</p>
+    <textarea>
+from sklearn.pipeline import make_pipeline
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+
+positive = ["great sound, love it", "excellent quality and fast delivery",
+            "works perfectly, great price", "really happy, highly recommend",
+            "comfortable and well made", "love the colour, great buy",
+            "fast and easy to use", "excellent, would buy again",
+            "good value, happy customer", "great battery and lovely design",
+            "perfect fit, very comfortable", "easy to set up, works great"]
+negative = ["terrible, it broke after a week", "poor quality, waste of money",
+            "awful sound, very disappointed", "stopped working, returned it",
+            "slow delivery and a broken box", "uncomfortable and too small",
+            "bad battery, dies quickly", "useless app, keeps crashing",
+            "poor fit, disappointed", "terrible customer service",
+            "broke on day one, awful", "waste of time, bad quality"]
+texts = positive + negative
+labels = ["positive"] * len(positive) + ["negative"] * len(negative)
+model = make_pipeline(TfidfVectorizer(), LogisticRegression())
+model.fit(texts, labels)
+
+def analyze(reviews):
+    # predict the labels, then return the dictionary
+    return {}
+
+print(analyze(["great sound", "it broke, terrible", "love the colour"]))
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden>Inside the function: <code>predicted = list(model.predict(reviews))</code></li>
+      <li hidden><code>positive = predicted.count("positive")</code>, and the same for <code>"negative"</code>.</li>
+      <li hidden><code>return {"count": len(reviews), "positive": positive, "negative": negative, "positive_share": positive / len(reviews) * 100}</code></li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+assert "analyze" in globals() and callable(analyze), "Keep the function called analyze."
+for _batch in [["great sound", "it broke, terrible", "love the colour"],
+               ["poor quality", "awful, returned it", "fast delivery, love it", "terrible battery"],
+               ["excellent, would buy again"]]:
+    _got = analyze(_batch)
+    assert isinstance(_got, dict), f"analyze should return a dictionary, but it returned {_got!r}."
+    for _key in ["count", "positive", "negative", "positive_share"]:
+        assert _key in _got, f"The dictionary is missing the key {_key!r}."
+    _pred = list(model.predict(_batch))
+    _pos = _pred.count("positive")
+    assert _got["count"] == len(_batch), f"For {len(_batch)} reviews, 'count' should be {len(_batch)}, but it is {_got['count']}."
+    assert _got["positive"] == _pos, f"For {_batch}, 'positive' should be {_pos}, but it is {_got['positive']}."
+    assert _got["negative"] == len(_batch) - _pos, f"For {_batch}, 'negative' should be {len(_batch) - _pos}, but it is {_got['negative']}."
+    assert abs(_got["positive_share"] - _pos / len(_batch) * 100) < 1e-9, f"For {_batch}, 'positive_share' should be {_pos / len(_batch) * 100:.1f} (a percentage), but it is {_got['positive_share']}."
+assert "predict(" in __code__, "Use model.predict inside analyze."
+</script>
+<script type="text/python" class="solution">
+from sklearn.pipeline import make_pipeline
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+
+positive = ["great sound, love it", "excellent quality and fast delivery",
+            "works perfectly, great price", "really happy, highly recommend",
+            "comfortable and well made", "love the colour, great buy",
+            "fast and easy to use", "excellent, would buy again",
+            "good value, happy customer", "great battery and lovely design",
+            "perfect fit, very comfortable", "easy to set up, works great"]
+negative = ["terrible, it broke after a week", "poor quality, waste of money",
+            "awful sound, very disappointed", "stopped working, returned it",
+            "slow delivery and a broken box", "uncomfortable and too small",
+            "bad battery, dies quickly", "useless app, keeps crashing",
+            "poor fit, disappointed", "terrible customer service",
+            "broke on day one, awful", "waste of time, bad quality"]
+texts = positive + negative
+labels = ["positive"] * len(positive) + ["negative"] * len(negative)
+model = make_pipeline(TfidfVectorizer(), LogisticRegression())
+model.fit(texts, labels)
+
+def analyze(reviews):
+    predicted = list(model.predict(reviews))
+    positive = predicted.count("positive")
+    negative = predicted.count("negative")
+    return {
+        "count": len(reviews),
+        "positive": positive,
+        "negative": negative,
+        "positive_share": positive / len(reviews) * 100,
+    }
+
+print(analyze(["great sound", "it broke, terrible", "love the colour"]))
+</script>
+  </section>
+
+
+  <!-- Exercise 4 -->
+  <section class="exercise" id="report-lines">
+    <h3>4. Report lines</h3>
+    <p>
+      Write <code>make_report(result)</code> that takes a result dictionary like the one below and
+      <strong>returns a list of three lines</strong> (texts):
+    </p>
+    <ol>
+      <li><code>Reviews: 12</code></li>
+      <li><code>Positive: 58.3%</code> (one decimal)</li>
+      <li><code>Verdict: mostly happy</code> if the share is 50 or more, otherwise <code>Verdict: mostly unhappy</code></li>
+    </ol>
+    <p>The checker will try it with other dictionaries too.</p>
+    <textarea>
+result = {"count": 12, "positive": 7, "negative": 5, "positive_share": 58.333333}
+
+def make_report(result):
+    # return a list of three lines
+    return []
+
+for line in make_report(result):
+    print(line)
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden>First line: <code>f"Reviews: {result['count']}"</code>. Second: <code>f"Positive: {result['positive_share']:.1f}%"</code>.</li>
+      <li hidden>Choose the verdict with <code>if result["positive_share"] &gt;= 50:</code> … <code>else:</code> …</li>
+      <li hidden>Finish with <code>return [line1, line2, line3]</code>.</li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+assert "make_report" in globals() and callable(make_report), "Keep the function called make_report."
+for _r in [{"count": 12, "positive": 7, "negative": 5, "positive_share": 58.333333},
+           {"count": 4, "positive": 1, "negative": 3, "positive_share": 25.0},
+           {"count": 10, "positive": 5, "negative": 5, "positive_share": 50.0}]:
+    _got = make_report(_r)
+    assert isinstance(_got, list), f"make_report should return a list, but it returned {_got!r}."
+    _verdict = "mostly happy" if _r["positive_share"] >= 50 else "mostly unhappy"
+    _want = [f"Reviews: {_r['count']}", f"Positive: {_r['positive_share']:.1f}%", f"Verdict: {_verdict}"]
+    assert len(_got) == 3, f"make_report should return 3 lines, but it returned {len(_got)}."
+    assert _got == _want, f"For {_r}, make_report should return {_want}, but it returned {_got}."
+</script>
+<script type="text/python" class="solution">
+result = {"count": 12, "positive": 7, "negative": 5, "positive_share": 58.333333}
+
+def make_report(result):
+    line1 = f"Reviews: {result['count']}"
+    line2 = f"Positive: {result['positive_share']:.1f}%"
+    if result["positive_share"] >= 50:
+        line3 = "Verdict: mostly happy"
+    else:
+        line3 = "Verdict: mostly unhappy"
+    return [line1, line2, line3]
+
+for line in make_report(result):
+    print(line)
+</script>
+  </section>
+
+
+  <!-- Exercise 5 -->
+  <section class="exercise" id="most-positive">
+    <h3>5. Challenge: the happiest review</h3>
+    <p>
+      Extend <code>analyze()</code> so the dictionary also has a key
+      <code>"most_positive"</code>: the review with the <strong>highest chance of being
+      positive</strong> according to <code>model.predict_proba</code>. Keep the other keys
+      working.
+    </p>
+    <textarea>
+from sklearn.pipeline import make_pipeline
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+
+positive = ["great sound, love it", "excellent quality and fast delivery",
+            "works perfectly, great price", "really happy, highly recommend",
+            "comfortable and well made", "love the colour, great buy",
+            "fast and easy to use", "excellent, would buy again",
+            "good value, happy customer", "great battery and lovely design",
+            "perfect fit, very comfortable", "easy to set up, works great"]
+negative = ["terrible, it broke after a week", "poor quality, waste of money",
+            "awful sound, very disappointed", "stopped working, returned it",
+            "slow delivery and a broken box", "uncomfortable and too small",
+            "bad battery, dies quickly", "useless app, keeps crashing",
+            "poor fit, disappointed", "terrible customer service",
+            "broke on day one, awful", "waste of time, bad quality"]
+texts = positive + negative
+labels = ["positive"] * len(positive) + ["negative"] * len(negative)
+model = make_pipeline(TfidfVectorizer(), LogisticRegression())
+model.fit(texts, labels)
+
+def analyze(reviews):
+    predicted = list(model.predict(reviews))
+    positive = predicted.count("positive")
+    return {
+        "count": len(reviews),
+        "positive": positive,
+        "negative": len(reviews) - positive,
+        "positive_share": positive / len(reviews) * 100,
+        # add "most_positive" here
+    }
+
+print(analyze(["great sound", "it broke, terrible", "excellent, love it"]))
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden>The chance of "positive" for every review: <code>chances = model.predict_proba(reviews)[:, 1]</code> (column 1 is "positive" in <code>model.classes_</code>).</li>
+      <li hidden><code>chances.argmax()</code> is the position of the biggest chance.</li>
+      <li hidden>Add <code>"most_positive": reviews[chances.argmax()],</code> to the dictionary.</li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+assert "analyze" in globals() and callable(analyze), "Keep the function called analyze."
+_col = list(model.classes_).index("positive")
+for _batch in [["great sound", "it broke, terrible", "excellent, love it"],
+               ["poor quality", "comfortable and well made", "awful, returned it"],
+               ["slow delivery", "terrible battery", "happy customer, good value", "great buy"]]:
+    _got = analyze(_batch)
+    assert isinstance(_got, dict), "analyze should still return a dictionary."
+    assert "most_positive" in _got, "The dictionary needs a new key called 'most_positive'."
+    _want = _batch[model.predict_proba(_batch)[:, _col].argmax()]
+    assert _got["most_positive"] == _want, f"For {_batch}, 'most_positive' should be {_want!r}, but it is {_got['most_positive']!r}."
+    _pos = list(model.predict(_batch)).count("positive")
+    assert _got.get("count") == len(_batch) and _got.get("positive") == _pos, "Keep the other keys (count, positive, negative, positive_share) working."
+    assert abs(_got.get("positive_share", -1) - _pos / len(_batch) * 100) < 1e-9, "Keep 'positive_share' working."
+assert "predict_proba(" in __code__, "Use model.predict_proba to find the chances."
+</script>
+<script type="text/python" class="solution">
+from sklearn.pipeline import make_pipeline
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+
+positive = ["great sound, love it", "excellent quality and fast delivery",
+            "works perfectly, great price", "really happy, highly recommend",
+            "comfortable and well made", "love the colour, great buy",
+            "fast and easy to use", "excellent, would buy again",
+            "good value, happy customer", "great battery and lovely design",
+            "perfect fit, very comfortable", "easy to set up, works great"]
+negative = ["terrible, it broke after a week", "poor quality, waste of money",
+            "awful sound, very disappointed", "stopped working, returned it",
+            "slow delivery and a broken box", "uncomfortable and too small",
+            "bad battery, dies quickly", "useless app, keeps crashing",
+            "poor fit, disappointed", "terrible customer service",
+            "broke on day one, awful", "waste of time, bad quality"]
+texts = positive + negative
+labels = ["positive"] * len(positive) + ["negative"] * len(negative)
+model = make_pipeline(TfidfVectorizer(), LogisticRegression())
+model.fit(texts, labels)
+
+def analyze(reviews):
+    predicted = list(model.predict(reviews))
+    positive = predicted.count("positive")
+    chances = model.predict_proba(reviews)[:, 1]
+    return {
+        "count": len(reviews),
+        "positive": positive,
+        "negative": len(reviews) - positive,
+        "positive_share": positive / len(reviews) * 100,
+        "most_positive": reviews[chances.argmax()],
+    }
+
+print(analyze(["great sound", "it broke, terrible", "excellent, love it"]))
+</script>
+  </section>
+
+
+  <!-- Shown when all exercises are done -->
+  <section id="finished" class="finished" hidden>
+    <h2>🏆 PyPath complete!</h2>
+    <p>
+      You finished all 30 days. From your first <code>print()</code> to a working text classifier:
+      be proud of that. Congratulations!
+    </p>
+  </section>
+
+
+  <!-- =============================================================
+       WHAT NEXT (replaces "Tomorrow" on the last day)
+       ============================================================= -->
+  <h2>🚀 What next</h2>
+  <p>
+    PyPath is finished, but this is a beginning, not an end. Pick one or two of these and keep
+    going. A little every week beats a lot once.
+  </p>
+  <ul>
+    <li>
+      <strong>Run Python on your own computer.</strong> Install Python from
+      <a href="https://www.python.org">python.org</a> and an editor such as
+      <a href="https://code.visualstudio.com">VS Code</a>. Everything you learned works the same way there.
+    </li>
+    <li>
+      <strong>Notebooks:</strong> <a href="https://jupyter.org">Jupyter</a> works like these pages
+      (code boxes plus notes). <a href="https://colab.research.google.com">Google Colab</a> runs
+      notebooks in the browser for free, even with a GPU.
+    </li>
+    <li>
+      <strong>Practise on real data:</strong> <a href="https://www.kaggle.com">Kaggle</a> has
+      thousands of free datasets and beginner competitions, including the real Titanic dataset
+      that inspired our <em>Northern Star</em> ship.
+    </li>
+    <li>
+      <strong>Learn Git and GitHub</strong> to save every version of your code and share your
+      projects. A few finished projects on GitHub are a great portfolio.
+    </li>
+    <li>
+      <strong>Go deeper in pandas</strong> (its official "10 minutes to pandas" guide) and in
+      <strong>statistics</strong>: averages and spread, probability, sampling and hypothesis tests
+      help you trust (or doubt) your results.
+    </li>
+    <li>
+      <strong>Deep learning frameworks:</strong> <a href="https://pytorch.org">PyTorch</a> or
+      <a href="https://keras.io">Keras</a>, as previewed on Day 26.
+    </li>
+    <li>
+      <strong>Modern NLP:</strong> <a href="https://huggingface.co/learn">Hugging Face</a> offers
+      free courses and ready-trained <em>transformer</em> models that read words in context, so
+      they handle "not bad" and many sarcastic reviews far better than our bag of words.
+    </li>
+    <li>
+      <strong>Build something you care about:</strong> your own expenses, your sports team's
+      results, your study hours. A small real project teaches more than any course.
+    </li>
+  </ul>
+  <p>Thank you for learning with PyPath. Happy coding! 🐍</p>
+
+
+  <footer class="screen-only">
+    <p>
+      Your answers are saved in this browser only. Python downloads the first time you open
+      the page, so you need an internet connection.
+    </p>
+    <button id="erase-progress" class="quiet">Erase my answers for this day</button>
+  </footer>
+
+</main>
+
+<!-- Shows whether Python is loading or ready -->
+<div id="python-status" role="status"></div>
+
+<script src="script.js"></script>
+</body>
+</html>

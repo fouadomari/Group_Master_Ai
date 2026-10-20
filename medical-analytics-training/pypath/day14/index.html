@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Day 14: Exploratory data analysis (EDA) · PyPath</title>
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Python for the browser (Pyodide). Downloaded the first time, then cached. -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v314.0.7/full/pyodide.js"></script>
+</head>
+
+<body data-day="day14">
+<main>
+
+  <!-- =============================================================
+       HEADER
+       ============================================================= -->
+  <header class="lesson-header">
+    <p class="muted small">Data Science · Day 14 of 30 · about 60 minutes</p>
+    <h1>Exploratory data analysis (EDA)</h1>
+    <div class="tools">
+      <button id="reset-variables" class="quiet" title="Forget all variables created by this page's code boxes">↺ Forget variables</button>
+    </div>
+  </header>
+
+
+  <!-- =============================================================
+       TODAY'S GOAL
+       ============================================================= -->
+  <h2>🎯 Today's goal</h2>
+  <p>By the end of this hour you will:</p>
+  <ul>
+    <li>follow a step-by-step <strong>EDA routine</strong> to get to know a new dataset</li>
+    <li>describe how values are spread with <code>describe()</code>, histograms and <code>value_counts(normalize=True)</code></li>
+    <li>compare groups with <code>groupby</code> and <code>pd.crosstab</code></li>
+    <li>measure how two columns move together with the <strong>correlation</strong> <code>.corr()</code>, and know why it doesn't prove cause</li>
+    <li>find <strong>outliers</strong> with the IQR rule, and write your findings in plain English</li>
+  </ul>
+
+
+  <!-- =============================================================
+       WHY THIS MATTERS
+       ============================================================= -->
+  <h2>🤔 Why this matters</h2>
+  <p>
+    <strong>Exploratory data analysis</strong> (EDA) means getting to know a dataset before you
+    trust it or build anything on it. It's like a doctor's first examination: look, measure,
+    compare, notice anything unusual, and only then decide what to do.
+  </p>
+  <p>
+    Every real data project starts this way, and so will the machine-learning days ahead. EDA
+    uses everything from the last five days: pandas for loading, filtering and grouping,
+    cleaning for the problems you find, and charts to see patterns. Today you'll put it all
+    together into one routine you can reuse on any dataset.
+  </p>
+  <p class="note screen-only">
+    <strong>Remember:</strong> the code boxes on this page share their variables, like pages of
+    one notebook. Run them <strong>from top to bottom</strong>. The first box loads NumPy and
+    pandas, which can take a few seconds.
+  </p>
+
+  <h3>🧭 The EDA routine</h3>
+  <ol>
+    <li><strong>Questions first:</strong> what do you want to find out?</li>
+    <li><strong>Shape and types:</strong> how many rows and columns, and what kind is each column?</li>
+    <li><strong>Missing values:</strong> where are the gaps?</li>
+    <li><strong>Distributions:</strong> how is each column spread out?</li>
+    <li><strong>Groups:</strong> do categories differ from each other?</li>
+    <li><strong>Relationships:</strong> do two columns move together?</li>
+    <li><strong>Outliers:</strong> are there values that don't fit?</li>
+    <li><strong>Findings:</strong> write down what you learned, in plain words.</li>
+  </ol>
+
+
+  <!-- =============================================================
+       THE DATA
+       ============================================================= -->
+  <h2>🎒 Today's data: a student survey</h2>
+  <p>
+    Imagine a survey of 200 students from three schools: hours of study per week, hours of
+    sleep per night, attendance (the percentage of classes they came to) and their exam score.
+    The data is <strong>made up</strong>: we generate it with NumPy's random generator and a fixed
+    seed, so everyone gets exactly the same numbers. We also planted a few problems for you to
+    find. Don't worry about understanding every line of the generator; the point is the
+    table it makes.
+  </p>
+
+  <div class="cell">
+    <textarea>
+import numpy as np
+import pandas as pd
+
+# Made-up survey of 200 students (generated with a fixed seed)
+rng = np.random.default_rng(42)
+n = 200
+school = rng.choice(["North", "South", "East"], size=n, p=[0.4, 0.35, 0.25])
+study_hours = rng.normal(9, 3.5, n).clip(0, 20).round(1)    # per week
+sleep_hours = rng.normal(7, 1, n).clip(4, 10).round(1)      # per night
+attendance = rng.normal(88, 7, n).clip(55, 100).round()     # % of classes
+noise = rng.normal(0, 8, n)
+score = (-8 + 3 * study_hours + 2 * sleep_hours + 0.3 * attendance
+         + 6 * (school == "North") + noise).clip(0, 100).round()
+
+students = pd.DataFrame({"school": school, "study_hours": study_hours,
+                         "sleep_hours": sleep_hours, "attendance": attendance,
+                         "score": score})
+# Planted problems: 9 missing sleep values and 3 suspicious study hours
+students.loc[rng.choice(n, size=9, replace=False), "sleep_hours"] = np.nan
+students.loc[[17, 88, 140], "study_hours"] = [38.0, 42.5, 45.0]
+
+print(students.shape)
+students.head()</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+
+  <!-- =============================================================
+       STEP 1-3: QUESTIONS, SHAPE, MISSING
+       ============================================================= -->
+  <h2>❓ Steps 1–3: questions, shape and gaps</h2>
+  <p>
+    <strong>Questions first.</strong> Without questions you'll wander around the data. Ours:
+  </p>
+  <ol>
+    <li>Do students who study more get higher scores? What about sleep and attendance?</li>
+    <li>Do the three schools differ?</li>
+    <li>Is anything in the data wrong or strange?</li>
+  </ol>
+  <p>
+    The output above already told us the <strong>shape</strong>: 200 rows (students) and 5 columns.
+    Now the <strong>types</strong> and the <strong>gaps</strong>:
+  </p>
+
+  <div class="cell">
+    <textarea>
+print(students.dtypes)
+print()
+print("Missing values per column:")
+print(students.isna().sum())</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    One text column (<code>school</code>), four number columns, and 9 students without a sleep
+    value. That's 4.5% of the rows: few enough that most calculations can simply skip them
+    (pandas does that automatically). Write it down for your findings.
+  </p>
+
+
+  <!-- =============================================================
+       STEP 4: DISTRIBUTIONS
+       ============================================================= -->
+  <h2>📶 Step 4: distributions</h2>
+  <p>
+    A <strong>distribution</strong> is how the values of a column are spread out: where most of
+    them are, how far they reach, and whether some are far away from the rest.
+    <code>describe()</code> sums it up in numbers:
+  </p>
+
+  <div class="cell">
+    <textarea>
+students.describe().round(1)</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>How to read it, row by row:</p>
+  <ul>
+    <li><strong>count:</strong> filled cells (sleep has only 191).</li>
+    <li><strong>mean:</strong> the average. <strong>std</strong> (<em>standard deviation</em>): how far values typically are from the mean.</li>
+    <li><strong>min / max:</strong> the smallest and largest value. Look here first for strange values!</li>
+    <li><strong>25%, 50%, 75%:</strong> the <em>quartiles</em>. A quarter of the students are below the 25% value, half are below the 50% value (the <em>median</em>), three quarters are below the 75% value.</li>
+  </ul>
+  <p>
+    Did you spot it? Most students study 7 to 12 hours a week, but the <strong>max is 45</strong>.
+    That's suspicious. Keep it in mind. A histogram shows the shapes:
+  </p>
+
+  <div class="cell">
+    <textarea>
+import matplotlib.pyplot as plt
+
+fig, (left, right) = plt.subplots(1, 2, figsize=(9, 3.2))
+left.hist(students["score"], bins=15, color="steelblue", edgecolor="white")
+left.set_title("Exam score")
+right.hist(students["study_hours"], bins=20, color="darkorange",
+           edgecolor="white")
+right.set_title("Study hours per week")
+plt.tight_layout()
+plt.show()</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    Scores form a hill around 60. Study hours form a hill around 9, plus a few lonely bars far
+    to the right: those are the strange values. For a text column, the "distribution" is simply
+    how often each value appears. <code>normalize=True</code> gives <strong>shares</strong>
+    (fractions of 1) instead of counts:
+  </p>
+
+  <div class="cell">
+    <textarea>
+students["school"].value_counts(normalize=True)</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>So about 40% of the students are from North, 36% from South and 25% from East.</p>
+
+
+  <!-- =============================================================
+       STEP 5: GROUPS
+       ============================================================= -->
+  <h2>🏫 Step 5: comparing groups</h2>
+  <p>Do the schools differ? <code>groupby</code> from Day 11 answers that:</p>
+
+  <div class="cell">
+    <textarea>
+columns = ["score", "study_hours", "sleep_hours"]
+by_school = students.groupby("school")[columns].mean()
+by_school.round(1)</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    North has the highest average score, but the differences are only a few points. With
+    about 50 to 80 students per school, small differences like these could easily be luck.
+    Be careful not to over-sell them.
+  </p>
+  <p>
+    A <strong>crosstab</strong> (cross-tabulation) counts how often each combination of two
+    categories appears. Let's add a <code>passed</code> column (score of 60 or more) and cross it
+    with the school. <code>normalize="index"</code> turns each row into shares, so each row adds
+    up to 1:
+  </p>
+
+  <div class="cell">
+    <textarea>
+students["passed"] = students["score"] >= 60
+
+counts = pd.crosstab(students["school"], students["passed"])
+shares = pd.crosstab(students["school"], students["passed"], normalize="index")
+print(counts)
+print()
+print(shares.round(2))</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    Interesting: East has the highest <em>pass rate</em> (63%) even though North has the highest
+    <em>average</em>. Different measures can tell slightly different stories, which is exactly why
+    we look at more than one.
+  </p>
+
+
+  <!-- =============================================================
+       STEP 6: RELATIONSHIPS
+       ============================================================= -->
+  <h2>🔗 Step 6: relationships and correlation</h2>
+  <p>
+    Do students who study more score higher? The <strong>correlation</strong>, written
+    <em>r</em>, measures how strongly two number columns move together in a straight-line way.
+    It is always between −1 and +1:
+  </p>
+  <table>
+    <thead>
+      <tr><th>r</th><th>Meaning</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>close to +1</td><td>when one goes up, the other goes up too (strong)</td></tr>
+      <tr><td>around +0.3 to +0.7</td><td>they tend to go up together, with plenty of exceptions</td></tr>
+      <tr><td>close to 0</td><td>no straight-line relationship</td></tr>
+      <tr><td>negative</td><td>when one goes up, the other tends to go down</td></tr>
+    </tbody>
+  </table>
+  <p>Correlation only works on numbers, so calling it on the whole table fails:</p>
+
+  <div class="cell error-demo">
+    <textarea>
+students.corr()</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    <em>"could not convert string to float: 'East'"</em>: pandas tried to turn the school names
+    into numbers. Pick the number columns first. For one pair of columns use
+    <code>column_a.corr(column_b)</code>:
+  </p>
+
+  <div class="cell">
+    <textarea>
+number_columns = ["study_hours", "sleep_hours", "attendance", "score"]
+print(students[number_columns].corr().round(2))
+print()
+
+r = students["study_hours"].corr(students["score"])
+print(f"Study hours vs score: r = {r:.2f}")</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    Read the table by finding a row and a column: where <em>score</em> meets
+    <em>study_hours</em> you find their r. (The diagonal is always 1: every column matches itself
+    perfectly.) Study hours have the strongest link with the score, about 0.35. A scatter plot
+    shows what's behind that number:
+  </p>
+
+  <div class="cell">
+    <textarea>
+plt.figure(figsize=(6, 3.8))
+plt.scatter(students["study_hours"], students["score"], alpha=0.5)
+plt.title("Study hours vs exam score (made-up data)")
+plt.xlabel("Study hours per week")
+plt.ylabel("Score")
+plt.show()</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    A clear upward cloud on the left, and three lonely dots far to the right. Those three points
+    pull the line and make r smaller than it should be.
+  </p>
+
+  <p class="note">
+    <strong>Correlation is not causation.</strong> Even a strong r only says two things go
+    together, not that one <em>causes</em> the other. Ice-cream sales and sunburns rise together,
+    but ice cream doesn't cause sunburn: hot sunny weather causes both. Maybe students who study
+    more are also more motivated, and motivation raises the score. Data like ours can't tell
+    the difference.
+  </p>
+
+
+  <!-- =============================================================
+       STEP 7: OUTLIERS
+       ============================================================= -->
+  <h2>🚩 Step 7: outliers</h2>
+  <p>
+    An <strong>outlier</strong> is a value far away from the rest. Some are mistakes (a typo of 38
+    instead of 3.8), some are real but rare. A common rule to flag them uses the
+    <strong>IQR</strong> (<em>interquartile range</em>): the distance between the 25% value (Q1)
+    and the 75% value (Q3), where the middle half of the data lives. Anything more than
+    <strong>1.5 × IQR</strong> below Q1 or above Q3 is flagged. <code>quantile(0.25)</code> gives Q1:
+  </p>
+
+  <div class="cell">
+    <textarea>
+q1 = students["study_hours"].quantile(0.25)
+q3 = students["study_hours"].quantile(0.75)
+iqr = q3 - q1
+lower = q1 - 1.5 * iqr
+upper = q3 + 1.5 * iqr
+print(f"Q1 = {q1:.2f}, Q3 = {q3:.2f}, IQR = {iqr:.2f}")
+print(f"Normal range: {lower:.2f} to {upper:.2f} hours")
+
+too_low = students["study_hours"] &lt; lower
+too_high = students["study_hours"] > upper
+outliers = students[too_low | too_high]
+outliers</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    Four students are flagged. 38, 42.5 and 45 hours a week of study, with fairly low scores,
+    look like typing mistakes. But 19.2 hours is possible for a hard-working student. The rule
+    only <strong>flags</strong> candidates; you decide what to do with each. Let's see how much
+    the three mistakes were hiding:
+  </p>
+
+  <div class="cell">
+    <textarea>
+typos = students["study_hours"] > 30
+fixed = students[~typos]      # every student except the three typos
+
+r_before = students["study_hours"].corr(students["score"])
+r_after = fixed["study_hours"].corr(fixed["score"])
+print(f"r with the typos:    {r_before:.2f}")
+print(f"r without the typos: {r_after:.2f}")</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    Three wrong values out of 200 almost <strong>halved</strong> the correlation. That's why
+    outliers deserve attention before you draw any conclusion.
+  </p>
+
+
+  <!-- =============================================================
+       STEP 8: FINDINGS
+       ============================================================= -->
+  <h2>📝 Step 8: write down your findings</h2>
+  <p>
+    An analysis isn't finished until someone else can understand it. Write a few short
+    sentences in plain words, with the numbers that support them, and mention the problems
+    you found. f-strings (Day 2) keep the numbers in the sentences up to date:
+  </p>
+
+  <div class="cell">
+    <textarea>
+pass_rate = students["passed"].mean()   # True counts as 1: the mean is the share
+best_school = by_school["score"].idxmax()
+
+print(f"Finding 1: More study goes with higher scores (r = {r_after:.2f}).")
+print(f"Finding 2: {pass_rate:.0%} passed. {best_school} has the best average,")
+print("           but the schools differ by only a few points.")
+print("Finding 3: 9 sleep values are missing; 3 study times look like typos.")</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    <code>{pass_rate:.0%}</code> shows a share as a percentage with 0 decimals (0.57 becomes
+    57%). Good findings are short, honest about uncertainty, and never claim more than the data
+    shows ("goes with", not "causes").
+  </p>
+
+
+  <!-- =============================================================
+       COMMON MISTAKES + RECAP
+       ============================================================= -->
+  <h2>⚠️ Common mistakes</h2>
+  <ul>
+    <li>Jumping into charts with no question in mind. Write your questions first.</li>
+    <li>Calling <code>.corr()</code> on a table with text columns → <code>ValueError: could not convert string to float</code>. Select the number columns.</li>
+    <li>Reading correlation as cause: "goes together with" is all r can say.</li>
+    <li>Deleting every flagged outlier automatically. Check each one: is it a mistake or a rare but real value?</li>
+    <li>Trusting small differences between groups. A few points with small groups may just be luck.</li>
+  </ul>
+
+  <h2>✅ Recap</h2>
+  <ul>
+    <li>The EDA routine: questions → shape/types → missing → distributions → groups → relationships → outliers → findings.</li>
+    <li><code>describe()</code> gives count, mean, std, min, quartiles and max; check min and max for odd values.</li>
+    <li><code>value_counts(normalize=True)</code> gives shares; <code>pd.crosstab(a, b, normalize="index")</code> compares two categories.</li>
+    <li><code>df[cols].corr()</code> and <code>a.corr(b)</code> give r between −1 and +1. Correlation is not causation.</li>
+    <li>IQR rule: <code>iqr = q3 - q1</code>; flag values below <code>q1 - 1.5*iqr</code> or above <code>q3 + 1.5*iqr</code>.</li>
+    <li>Finish with a few plain-English findings, numbers included.</li>
+  </ul>
+
+
+  <!-- =============================================================
+       EXERCISES
+       Each exercise has: a task, a starting code box, hints,
+       hidden tests (<script class="tests">) and a solution
+       (<script class="solution">). The tests are Python "assert" lines
+       and can look at the variables the answer created.
+       ============================================================= -->
+  <h2>🏋️ Exercises</h2>
+  <p class="screen-only">
+    Write your answer in the box and click <strong>✓ Check my answer</strong>. Stuck? Use the
+    hints. After 3 tries you can see a solution. Each exercise starts by generating the same
+    made-up student survey as the lesson, so it works on its own.
+  </p>
+  <p class="print-only">
+    Write your answer in the space under each exercise. Try it on the computer too, by opening
+    this day's <code>index.html</code>. Solutions are in the answer key at the end.
+  </p>
+
+  <div class="score">
+    <div class="bar"><div id="score-bar"></div></div>
+    <span id="score-text" class="muted small">0 / 5 done</span>
+  </div>
+
+
+  <!-- Exercise 1 -->
+  <section class="exercise" id="missing-report">
+    <h3>1. Missing values report</h3>
+    <p>Create three variables:</p>
+    <ul>
+      <li><code>missing</code>: the number of empty cells in each column (a Series)</li>
+      <li><code>most_missing</code>: the <strong>name</strong> of the column with the most empty cells, found with code</li>
+      <li><code>missing_pct</code>: that column's empty cells as a <strong>percentage</strong> of all rows</li>
+    </ul>
+    <textarea>
+import numpy as np
+import pandas as pd
+
+# Made-up survey of 200 students (same as the lesson)
+rng = np.random.default_rng(42)
+n = 200
+school = rng.choice(["North", "South", "East"], size=n, p=[0.4, 0.35, 0.25])
+study_hours = rng.normal(9, 3.5, n).clip(0, 20).round(1)
+sleep_hours = rng.normal(7, 1, n).clip(4, 10).round(1)
+attendance = rng.normal(88, 7, n).clip(55, 100).round()
+noise = rng.normal(0, 8, n)
+score = (-8 + 3 * study_hours + 2 * sleep_hours + 0.3 * attendance
+         + 6 * (school == "North") + noise).clip(0, 100).round()
+students = pd.DataFrame({"school": school, "study_hours": study_hours,
+                         "sleep_hours": sleep_hours, "attendance": attendance,
+                         "score": score})
+students.loc[rng.choice(n, size=9, replace=False), "sleep_hours"] = np.nan
+students.loc[[17, 88, 140], "study_hours"] = [38.0, 42.5, 45.0]
+
+# Create missing, most_missing and missing_pct below
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden><code>missing = students.isna().sum()</code></li>
+      <li hidden><code>.idxmax()</code> gives the label (here: the column name) of the biggest value.</li>
+      <li hidden><code>missing_pct = missing.max() / len(students) * 100</code></li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+assert "missing" in globals(), "Create a variable called missing."
+assert isinstance(missing, pd.Series), "missing should be a Series: students.isna().sum()."
+assert missing["sleep_hours"] == 9 and missing["score"] == 0, "missing should count the empty cells in each column (sleep_hours has 9)."
+assert "most_missing" in globals(), "Create a variable called most_missing."
+assert most_missing == "sleep_hours", f"most_missing should be the column name sleep_hours, but it is {most_missing!r}."
+assert "idxmax" in __code__ or "sort_values" in __code__, "Find most_missing with code, for example missing.idxmax()."
+assert "missing_pct" in globals(), "Create a variable called missing_pct."
+assert abs(missing_pct - 4.5) < 0.01, f"missing_pct should be 4.5 (9 of 200 rows, as a percentage), but it is {missing_pct}."
+</script>
+<script type="text/python" class="solution">
+import numpy as np
+import pandas as pd
+
+# Made-up survey of 200 students (same as the lesson)
+rng = np.random.default_rng(42)
+n = 200
+school = rng.choice(["North", "South", "East"], size=n, p=[0.4, 0.35, 0.25])
+study_hours = rng.normal(9, 3.5, n).clip(0, 20).round(1)
+sleep_hours = rng.normal(7, 1, n).clip(4, 10).round(1)
+attendance = rng.normal(88, 7, n).clip(55, 100).round()
+noise = rng.normal(0, 8, n)
+score = (-8 + 3 * study_hours + 2 * sleep_hours + 0.3 * attendance
+         + 6 * (school == "North") + noise).clip(0, 100).round()
+students = pd.DataFrame({"school": school, "study_hours": study_hours,
+                         "sleep_hours": sleep_hours, "attendance": attendance,
+                         "score": score})
+students.loc[rng.choice(n, size=9, replace=False), "sleep_hours"] = np.nan
+students.loc[[17, 88, 140], "study_hours"] = [38.0, 42.5, 45.0]
+
+missing = students.isna().sum()
+most_missing = missing.idxmax()
+missing_pct = missing.max() / len(students) * 100
+print(missing)
+print(f"{most_missing}: {missing_pct:.1f}% missing")
+</script>
+  </section>
+
+
+  <!-- Exercise 2 -->
+  <section class="exercise" id="group-means">
+    <h3>2. Compare the schools</h3>
+    <p>
+      Use <code>groupby</code> with named aggregations (Day 11) to build a table
+      <code>school_summary</code> with one row per school and two columns:
+      <code>mean_score</code> (average score) and <code>mean_sleep</code> (average sleep hours).
+      Then store the difference between the highest and the lowest average score in
+      <code>gap</code>.
+    </p>
+    <textarea>
+import numpy as np
+import pandas as pd
+
+# Made-up survey of 200 students (same as the lesson)
+rng = np.random.default_rng(42)
+n = 200
+school = rng.choice(["North", "South", "East"], size=n, p=[0.4, 0.35, 0.25])
+study_hours = rng.normal(9, 3.5, n).clip(0, 20).round(1)
+sleep_hours = rng.normal(7, 1, n).clip(4, 10).round(1)
+attendance = rng.normal(88, 7, n).clip(55, 100).round()
+noise = rng.normal(0, 8, n)
+score = (-8 + 3 * study_hours + 2 * sleep_hours + 0.3 * attendance
+         + 6 * (school == "North") + noise).clip(0, 100).round()
+students = pd.DataFrame({"school": school, "study_hours": study_hours,
+                         "sleep_hours": sleep_hours, "attendance": attendance,
+                         "score": score})
+students.loc[rng.choice(n, size=9, replace=False), "sleep_hours"] = np.nan
+students.loc[[17, 88, 140], "study_hours"] = [38.0, 42.5, 45.0]
+
+# Create school_summary and gap below
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden>Named aggregation: <code>new_name=("column", "mean")</code> inside <code>.agg(...)</code>.</li>
+      <li hidden><code>school_summary = students.groupby("school").agg(mean_score=("score", "mean"), mean_sleep=("sleep_hours", "mean"))</code></li>
+      <li hidden><code>gap = school_summary["mean_score"].max() - school_summary["mean_score"].min()</code></li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+assert "school_summary" in globals(), "Create a variable called school_summary."
+assert isinstance(school_summary, pd.DataFrame), "school_summary should be a table: students.groupby(\"school\").agg(...)."
+assert "groupby" in __code__, "Use groupby to compare the schools."
+for col in ["mean_score", "mean_sleep"]:
+    assert col in school_summary.columns, f"school_summary needs a column called {col}."
+assert len(school_summary) == 3, f"school_summary should have one row per school (3), but it has {len(school_summary)}."
+summary = school_summary.set_index("school") if "school" in school_summary.columns else school_summary
+expected = students.groupby("school")["score"].mean()
+for s in expected.index:
+    assert abs(summary.loc[s, "mean_score"] - expected[s]) < 0.01, f"The mean_score of {s} should be {expected[s]:.2f}."
+sleep = students.groupby("school")["sleep_hours"].mean()
+for s in sleep.index:
+    assert abs(summary.loc[s, "mean_sleep"] - sleep[s]) < 0.01, f"The mean_sleep of {s} should be {sleep[s]:.2f}. Did you use the sleep_hours column?"
+assert "gap" in globals(), "Create a variable called gap."
+assert abs(gap - (expected.max() - expected.min())) < 0.01, f"gap should be the highest minus the lowest mean score: {expected.max() - expected.min():.2f}."
+assert "max()" in __code__ and "min()" in __code__, "Calculate gap with .max() and .min(), don't type the number."
+</script>
+<script type="text/python" class="solution">
+import numpy as np
+import pandas as pd
+
+# Made-up survey of 200 students (same as the lesson)
+rng = np.random.default_rng(42)
+n = 200
+school = rng.choice(["North", "South", "East"], size=n, p=[0.4, 0.35, 0.25])
+study_hours = rng.normal(9, 3.5, n).clip(0, 20).round(1)
+sleep_hours = rng.normal(7, 1, n).clip(4, 10).round(1)
+attendance = rng.normal(88, 7, n).clip(55, 100).round()
+noise = rng.normal(0, 8, n)
+score = (-8 + 3 * study_hours + 2 * sleep_hours + 0.3 * attendance
+         + 6 * (school == "North") + noise).clip(0, 100).round()
+students = pd.DataFrame({"school": school, "study_hours": study_hours,
+                         "sleep_hours": sleep_hours, "attendance": attendance,
+                         "score": score})
+students.loc[rng.choice(n, size=9, replace=False), "sleep_hours"] = np.nan
+students.loc[[17, 88, 140], "study_hours"] = [38.0, 42.5, 45.0]
+
+school_summary = students.groupby("school").agg(
+    mean_score=("score", "mean"),
+    mean_sleep=("sleep_hours", "mean"),
+)
+gap = school_summary["mean_score"].max() - school_summary["mean_score"].min()
+print(school_summary.round(2))
+print(f"Gap: {gap:.2f} points")
+</script>
+  </section>
+
+
+  <!-- Exercise 3 -->
+  <section class="exercise" id="correlation">
+    <h3>3. Sleep or study?</h3>
+    <p>
+      Calculate the correlation of <code>sleep_hours</code> with <code>score</code> in
+      <code>r_sleep</code>, and of <code>attendance</code> with <code>score</code> in
+      <code>r_attendance</code>. Then use an <code>if</code> to store the name of the column with
+      the <strong>stronger</strong> (bigger) r in <code>stronger</code>: either
+      <code>"sleep_hours"</code> or <code>"attendance"</code>.
+    </p>
+    <textarea>
+import numpy as np
+import pandas as pd
+
+# Made-up survey of 200 students (same as the lesson)
+rng = np.random.default_rng(42)
+n = 200
+school = rng.choice(["North", "South", "East"], size=n, p=[0.4, 0.35, 0.25])
+study_hours = rng.normal(9, 3.5, n).clip(0, 20).round(1)
+sleep_hours = rng.normal(7, 1, n).clip(4, 10).round(1)
+attendance = rng.normal(88, 7, n).clip(55, 100).round()
+noise = rng.normal(0, 8, n)
+score = (-8 + 3 * study_hours + 2 * sleep_hours + 0.3 * attendance
+         + 6 * (school == "North") + noise).clip(0, 100).round()
+students = pd.DataFrame({"school": school, "study_hours": study_hours,
+                         "sleep_hours": sleep_hours, "attendance": attendance,
+                         "score": score})
+students.loc[rng.choice(n, size=9, replace=False), "sleep_hours"] = np.nan
+students.loc[[17, 88, 140], "study_hours"] = [38.0, 42.5, 45.0]
+
+# Create r_sleep, r_attendance and stronger below
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden><code>r_sleep = students["sleep_hours"].corr(students["score"])</code> (empty cells are skipped automatically).</li>
+      <li hidden>Do the same for <code>attendance</code>.</li>
+      <li hidden><code>if r_sleep &gt; r_attendance:</code> then <code>stronger = "sleep_hours"</code>, <code>else:</code> <code>stronger = "attendance"</code>.</li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+assert "r_sleep" in globals(), "Create a variable called r_sleep."
+assert "corr(" in __code__, "Calculate the correlations with .corr()."
+expected_sleep = students["sleep_hours"].corr(students["score"])
+expected_att = students["attendance"].corr(students["score"])
+assert abs(r_sleep - expected_sleep) < 0.001, f"r_sleep should be about {expected_sleep:.2f}, but it is {r_sleep}."
+assert "r_attendance" in globals(), "Create a variable called r_attendance."
+assert abs(r_attendance - expected_att) < 0.001, f"r_attendance should be about {expected_att:.2f}, but it is {r_attendance}."
+assert "stronger" in globals(), "Create a variable called stronger."
+best = "sleep_hours" if expected_sleep > expected_att else "attendance"
+assert stronger == best, f"stronger should be {best!r}, the column with the bigger r."
+assert "if " in __code__, "Use an if to choose stronger, so it would still be right with different data."
+</script>
+<script type="text/python" class="solution">
+import numpy as np
+import pandas as pd
+
+# Made-up survey of 200 students (same as the lesson)
+rng = np.random.default_rng(42)
+n = 200
+school = rng.choice(["North", "South", "East"], size=n, p=[0.4, 0.35, 0.25])
+study_hours = rng.normal(9, 3.5, n).clip(0, 20).round(1)
+sleep_hours = rng.normal(7, 1, n).clip(4, 10).round(1)
+attendance = rng.normal(88, 7, n).clip(55, 100).round()
+noise = rng.normal(0, 8, n)
+score = (-8 + 3 * study_hours + 2 * sleep_hours + 0.3 * attendance
+         + 6 * (school == "North") + noise).clip(0, 100).round()
+students = pd.DataFrame({"school": school, "study_hours": study_hours,
+                         "sleep_hours": sleep_hours, "attendance": attendance,
+                         "score": score})
+students.loc[rng.choice(n, size=9, replace=False), "sleep_hours"] = np.nan
+students.loc[[17, 88, 140], "study_hours"] = [38.0, 42.5, 45.0]
+
+r_sleep = students["sleep_hours"].corr(students["score"])
+r_attendance = students["attendance"].corr(students["score"])
+if r_sleep > r_attendance:
+    stronger = "sleep_hours"
+else:
+    stronger = "attendance"
+print(f"Sleep: r = {r_sleep:.2f}, attendance: r = {r_attendance:.2f}")
+print("Stronger:", stronger)
+</script>
+  </section>
+
+
+  <!-- Exercise 4 -->
+  <section class="exercise" id="outliers">
+    <h3>4. Outliers in attendance</h3>
+    <p>
+      Use the IQR rule on the <code>attendance</code> column. Create <code>q1</code>,
+      <code>q3</code>, <code>lower</code> and <code>upper</code> (the limits Q1 − 1.5 × IQR and
+      Q3 + 1.5 × IQR), and store <strong>how many students</strong> are outside the limits in
+      <code>n_outliers</code>.
+    </p>
+    <textarea>
+import numpy as np
+import pandas as pd
+
+# Made-up survey of 200 students (same as the lesson)
+rng = np.random.default_rng(42)
+n = 200
+school = rng.choice(["North", "South", "East"], size=n, p=[0.4, 0.35, 0.25])
+study_hours = rng.normal(9, 3.5, n).clip(0, 20).round(1)
+sleep_hours = rng.normal(7, 1, n).clip(4, 10).round(1)
+attendance = rng.normal(88, 7, n).clip(55, 100).round()
+noise = rng.normal(0, 8, n)
+score = (-8 + 3 * study_hours + 2 * sleep_hours + 0.3 * attendance
+         + 6 * (school == "North") + noise).clip(0, 100).round()
+students = pd.DataFrame({"school": school, "study_hours": study_hours,
+                         "sleep_hours": sleep_hours, "attendance": attendance,
+                         "score": score})
+students.loc[rng.choice(n, size=9, replace=False), "sleep_hours"] = np.nan
+students.loc[[17, 88, 140], "study_hours"] = [38.0, 42.5, 45.0]
+
+# Create q1, q3, lower, upper and n_outliers below
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden><code>q1 = students["attendance"].quantile(0.25)</code>, and <code>0.75</code> for q3.</li>
+      <li hidden><code>iqr = q3 - q1</code>, <code>lower = q1 - 1.5 * iqr</code>, <code>upper = q3 + 1.5 * iqr</code></li>
+      <li hidden>Filter with <code>|</code> as in the lesson, then count the rows: <code>n_outliers = len(...)</code>.</li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+col = students["attendance"]
+eq1, eq3 = col.quantile(0.25), col.quantile(0.75)
+elow, eup = eq1 - 1.5 * (eq3 - eq1), eq3 + 1.5 * (eq3 - eq1)
+for name in ["q1", "q3", "lower", "upper", "n_outliers"]:
+    assert name in globals(), f"Create a variable called {name}."
+assert "quantile" in __code__, "Find q1 and q3 with .quantile(0.25) and .quantile(0.75)."
+assert abs(q1 - eq1) < 0.001 and abs(q3 - eq3) < 0.001, f"q1 and q3 of attendance should be {eq1} and {eq3}."
+assert abs(lower - elow) < 0.001, f"lower should be q1 - 1.5 * IQR = {elow}, but it is {lower}."
+assert abs(upper - eup) < 0.001, f"upper should be q3 + 1.5 * IQR = {eup}, but it is {upper}."
+expected = int(((col < elow) | (col > eup)).sum())
+assert n_outliers == expected, f"There are {expected} students outside the limits, but n_outliers is {n_outliers}. Count both too low and too high."
+</script>
+<script type="text/python" class="solution">
+import numpy as np
+import pandas as pd
+
+# Made-up survey of 200 students (same as the lesson)
+rng = np.random.default_rng(42)
+n = 200
+school = rng.choice(["North", "South", "East"], size=n, p=[0.4, 0.35, 0.25])
+study_hours = rng.normal(9, 3.5, n).clip(0, 20).round(1)
+sleep_hours = rng.normal(7, 1, n).clip(4, 10).round(1)
+attendance = rng.normal(88, 7, n).clip(55, 100).round()
+noise = rng.normal(0, 8, n)
+score = (-8 + 3 * study_hours + 2 * sleep_hours + 0.3 * attendance
+         + 6 * (school == "North") + noise).clip(0, 100).round()
+students = pd.DataFrame({"school": school, "study_hours": study_hours,
+                         "sleep_hours": sleep_hours, "attendance": attendance,
+                         "score": score})
+students.loc[rng.choice(n, size=9, replace=False), "sleep_hours"] = np.nan
+students.loc[[17, 88, 140], "study_hours"] = [38.0, 42.5, 45.0]
+
+q1 = students["attendance"].quantile(0.25)
+q3 = students["attendance"].quantile(0.75)
+iqr = q3 - q1
+lower = q1 - 1.5 * iqr
+upper = q3 + 1.5 * iqr
+too_low = students["attendance"] < lower
+too_high = students["attendance"] > upper
+n_outliers = len(students[too_low | too_high])
+print(f"Normal range: {lower} to {upper}")
+print("Outliers:", n_outliers)
+</script>
+  </section>
+
+
+  <!-- Exercise 5 -->
+  <section class="exercise" id="findings">
+    <h3>5. Challenge: three findings</h3>
+    <p>Answer three EDA questions with code, then report them:</p>
+    <ul>
+      <li><code>pass_rate</code>: the share of students (between 0 and 1) with a score of <strong>60 or more</strong></li>
+      <li><code>best_school</code>: the school with the highest <strong>pass rate</strong> (not the highest average!)</li>
+      <li><code>r_study</code>: the correlation of study hours with score, <strong>after removing</strong> students who study more than 30 hours a week</li>
+    </ul>
+    <p>
+      Finally, print three lines that start with <code>Finding 1:</code>, <code>Finding 2:</code>
+      and <code>Finding 3:</code>, each one using one of the variables in an f-string.
+    </p>
+    <textarea>
+import numpy as np
+import pandas as pd
+
+# Made-up survey of 200 students (same as the lesson)
+rng = np.random.default_rng(42)
+n = 200
+school = rng.choice(["North", "South", "East"], size=n, p=[0.4, 0.35, 0.25])
+study_hours = rng.normal(9, 3.5, n).clip(0, 20).round(1)
+sleep_hours = rng.normal(7, 1, n).clip(4, 10).round(1)
+attendance = rng.normal(88, 7, n).clip(55, 100).round()
+noise = rng.normal(0, 8, n)
+score = (-8 + 3 * study_hours + 2 * sleep_hours + 0.3 * attendance
+         + 6 * (school == "North") + noise).clip(0, 100).round()
+students = pd.DataFrame({"school": school, "study_hours": study_hours,
+                         "sleep_hours": sleep_hours, "attendance": attendance,
+                         "score": score})
+students.loc[rng.choice(n, size=9, replace=False), "sleep_hours"] = np.nan
+students.loc[[17, 88, 140], "study_hours"] = [38.0, 42.5, 45.0]
+
+# 1. pass_rate
+# 2. best_school
+# 3. r_study
+# Then print Finding 1, 2 and 3
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden>Make a True/False column: <code>students["passed"] = students["score"] &gt;= 60</code>. The mean of True/False values is the share of Trues.</li>
+      <li hidden><code>best_school = students.groupby("school")["passed"].mean().idxmax()</code></li>
+      <li hidden><code>ok = students[students["study_hours"] &lt;= 30]</code>, then <code>r_study = ok["study_hours"].corr(ok["score"])</code>. Print with <code>print(f"Finding 1: {pass_rate:.0%} of students passed.")</code></li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+for name in ["pass_rate", "best_school", "r_study"]:
+    assert name in globals(), f"Create a variable called {name}."
+passed = students["score"] >= 60
+assert abs(pass_rate - passed.mean()) < 0.001, f"pass_rate should be the share of scores of 60 or more ({passed.mean():.2f}), as a number between 0 and 1."
+rates = passed.groupby(students["school"]).mean()
+assert best_school == rates.idxmax(), f"best_school should be the school with the highest pass rate ({rates.idxmax()}). Group the passed column, not the score."
+assert "groupby" in __code__, "Find best_school with groupby."
+ok = students[students["study_hours"] <= 30]
+expected_r = ok["study_hours"].corr(ok["score"])
+assert abs(r_study - expected_r) < 0.001, f"r_study should be about {expected_r:.2f} after removing students with more than 30 study hours, but it is {r_study:.2f}."
+assert "corr(" in __code__, "Calculate r_study with .corr()."
+for i in [1, 2, 3]:
+    assert any(line.startswith(f"Finding {i}:") for line in __lines__), f"Print a line that starts with Finding {i}:"
+assert "{" in __code__ and ("f\"" in __code__ or "f'" in __code__), "Use f-strings so the numbers in your findings come from the variables."
+</script>
+<script type="text/python" class="solution">
+import numpy as np
+import pandas as pd
+
+# Made-up survey of 200 students (same as the lesson)
+rng = np.random.default_rng(42)
+n = 200
+school = rng.choice(["North", "South", "East"], size=n, p=[0.4, 0.35, 0.25])
+study_hours = rng.normal(9, 3.5, n).clip(0, 20).round(1)
+sleep_hours = rng.normal(7, 1, n).clip(4, 10).round(1)
+attendance = rng.normal(88, 7, n).clip(55, 100).round()
+noise = rng.normal(0, 8, n)
+score = (-8 + 3 * study_hours + 2 * sleep_hours + 0.3 * attendance
+         + 6 * (school == "North") + noise).clip(0, 100).round()
+students = pd.DataFrame({"school": school, "study_hours": study_hours,
+                         "sleep_hours": sleep_hours, "attendance": attendance,
+                         "score": score})
+students.loc[rng.choice(n, size=9, replace=False), "sleep_hours"] = np.nan
+students.loc[[17, 88, 140], "study_hours"] = [38.0, 42.5, 45.0]
+
+students["passed"] = students["score"] >= 60
+pass_rate = students["passed"].mean()
+best_school = students.groupby("school")["passed"].mean().idxmax()
+
+ok = students[students["study_hours"] <= 30]
+r_study = ok["study_hours"].corr(ok["score"])
+
+print(f"Finding 1: {pass_rate:.0%} of students scored 60 or more.")
+print(f"Finding 2: {best_school} has the highest pass rate.")
+print(f"Finding 3: Study time goes with higher scores (r = {r_study:.2f}).")
+</script>
+  </section>
+
+
+  <!-- Shown when all exercises are done -->
+  <section id="finished" class="finished" hidden>
+    <h2>🏆 Day 14 complete!</h2>
+    <p>Great work. You can now explore any dataset step by step and explain what you found.</p>
+  </section>
+
+
+  <!-- =============================================================
+       TOMORROW
+       ============================================================= -->
+  <h2>🔜 Tomorrow</h2>
+  <p>
+    <strong>Mini-project: ship passengers EDA.</strong> You'll explore the passenger list of the
+    made-up ship <em>Northern Star</em> (inspired by the famous Titanic dataset) from start to
+    finish: clean it, compare survival rates by sex, class and age, draw the charts and write
+    your own findings.
+  </p>
+
+
+  <footer class="screen-only">
+    <p>
+      Your answers are saved in this browser only. Python downloads the first time you open
+      the page, so you need an internet connection.
+    </p>
+    <button id="erase-progress" class="quiet">Erase my answers for this day</button>
+  </footer>
+
+</main>
+
+<!-- Shows whether Python is loading or ready -->
+<div id="python-status" role="status"></div>
+
+<script src="script.js"></script>
+</body>
+</html>

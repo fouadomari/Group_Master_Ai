@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Day 15: Mini-project: ship passengers EDA · PyPath</title>
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Python for the browser (Pyodide). Downloaded the first time, then cached. -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v314.0.7/full/pyodide.js"></script>
+</head>
+
+<body data-day="day15">
+<main>
+
+  <!-- =============================================================
+       HEADER
+       ============================================================= -->
+  <header class="lesson-header">
+    <p class="muted small">Data Science · Day 15 of 30 · about 60 minutes</p>
+    <h1>Mini-project: ship passengers EDA</h1>
+    <div class="tools">
+      <button id="reset-variables" class="quiet" title="Forget all variables created by this page's code boxes">↺ Forget variables</button>
+    </div>
+  </header>
+
+
+  <!-- =============================================================
+       TODAY'S GOAL
+       ============================================================= -->
+  <h2>🎯 Today's goal</h2>
+  <p>Today there's no new big topic. You'll use everything from Days 9–14 on one dataset, start to finish:</p>
+  <ul>
+    <li>write down <strong>questions</strong> before touching the data</li>
+    <li><strong>inspect</strong> and <strong>clean</strong> a passenger list (missing ages, duplicated rows)</li>
+    <li>work out <strong>survival rates</strong> overall, by sex, by class and by age group</li>
+    <li>draw three <strong>charts</strong> that answer the questions at a glance</li>
+    <li>write your <strong>findings</strong> in plain English</li>
+  </ul>
+
+
+  <!-- =============================================================
+       WHY THIS MATTERS
+       ============================================================= -->
+  <h2>🤔 Why this matters</h2>
+  <p>
+    One of the most famous beginner datasets in data science is the passenger list of the
+    <em>Titanic</em>, the ship that sank in 1912. Who survived, and why? Today we work on a
+    dataset <strong>inspired by it</strong>: the passengers of the <em>Northern Star</em>, a ship
+    that never existed. <strong>Every passenger and number below is made up</strong> by a few
+    lines of Python, so the results are about our invented ship, not about real people.
+  </p>
+  <p>
+    A mini-project is like a recipe that uses everything in your kitchen. You already know
+    each step (pandas, cleaning, grouping, charts, EDA); today you see how they fit
+    together into one story. On <strong>Day 22</strong> you'll come back to this same ship and
+    teach a computer to <em>predict</em> who survives.
+  </p>
+  <p class="note screen-only">
+    <strong>Remember:</strong> the code boxes on this page share their variables, like pages of
+    one notebook. Run them <strong>from top to bottom</strong>. The first box loads pandas and can
+    take a few seconds.
+  </p>
+
+
+  <!-- =============================================================
+       STEP 1: QUESTIONS
+       ============================================================= -->
+  <h2>❓ Step 1: Questions first</h2>
+  <p>
+    Good analysis starts with questions, not with code. Here are ours for the
+    <em>Northern Star</em>:
+  </p>
+  <ol>
+    <li>How many passengers survived overall?</li>
+    <li>Did women and men survive at different rates?</li>
+    <li>Did first-class passengers (the most expensive tickets) do better?</li>
+    <li>Were children more likely to survive?</li>
+    <li>Which group did best, and which did worst?</li>
+  </ol>
+
+
+  <!-- =============================================================
+       STEP 2: THE DATA
+       ============================================================= -->
+  <h2>🚢 Step 2: Meet the data</h2>
+  <p>
+    This box <strong>creates</strong> the made-up passenger list with NumPy's random numbers
+    (Day 9) and puts it in a DataFrame called <code>ships</code>. You don't need to understand
+    every line; the important part is the table it builds. The seed <code>42</code> makes
+    the "random" data the same every time, for everyone.
+  </p>
+
+  <div class="cell">
+    <textarea>
+import numpy as np
+import pandas as pd
+
+rng = np.random.default_rng(42)
+n = 400
+pclass = rng.choice([1, 2, 3], size=n, p=[0.25, 0.25, 0.5])
+sex = rng.choice(["female", "male"], size=n, p=[0.4, 0.6])
+age = np.round(rng.normal(30, 13, size=n).clip(1, 75))
+fare = np.where(pclass == 1, rng.normal(85, 25, n),
+       np.where(pclass == 2, rng.normal(25, 8, n), rng.normal(10, 4, n)))
+fare = np.round(fare.clip(4, None), 2)
+embarked = rng.choice(["S", "C", "Q"], size=n, p=[0.7, 0.2, 0.1])
+chance = 0.12 + 0.45 * (sex == "female") + 0.2 * (pclass == 1) + 0.08 * (pclass == 2) + 0.15 * (age &lt; 12)
+survived = (rng.random(n) &lt; chance.clip(0, 0.95)).astype(int)
+
+ships = pd.DataFrame({
+    "passenger_id": np.arange(1, n + 1),
+    "pclass": pclass,
+    "sex": sex,
+    "age": age,
+    "fare": fare,
+    "embarked": embarked,
+    "survived": survived,
+})
+# Deliberate glitches to clean: 30 missing ages and 3 duplicated rows
+missing = rng.choice(n, size=30, replace=False)
+ships.loc[missing, "age"] = np.nan
+ships = pd.concat([ships, ships.iloc[[5, 17, 42]]], ignore_index=True)
+
+ships.head()</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>What the columns mean:</p>
+  <table>
+    <thead>
+      <tr><th>Column</th><th>Meaning</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>passenger_id</code></td><td>a number for each passenger</td></tr>
+      <tr><td><code>pclass</code></td><td>ticket class: 1 = first (most expensive), 2 = second, 3 = third (cheapest)</td></tr>
+      <tr><td><code>sex</code></td><td><code>"female"</code> or <code>"male"</code></td></tr>
+      <tr><td><code>age</code></td><td>age in years (some are missing)</td></tr>
+      <tr><td><code>fare</code></td><td>ticket price in made-up pounds</td></tr>
+      <tr><td><code>embarked</code></td><td>the port where they got on: S, C or Q</td></tr>
+      <tr><td><code>survived</code></td><td><code>1</code> = survived, <code>0</code> = did not survive</td></tr>
+    </tbody>
+  </table>
+  <p class="note">
+    <strong>Honest note:</strong> we planted the glitches on purpose (the last lines of the box):
+    30 ages were deleted and 3 rows were copied twice. Real data comes with glitches like
+    these, so finding them is part of the job.
+  </p>
+
+
+  <!-- =============================================================
+       STEP 3: INSPECT
+       ============================================================= -->
+  <h2>🔍 Step 3: Inspect</h2>
+  <p>
+    Before any calculation, look at the size, the types, the missing values and the
+    duplicates, just like the EDA routine from Day 14:
+  </p>
+
+  <div class="cell">
+    <textarea>
+print("Rows and columns:", ships.shape)
+print()
+print("Missing values per column:")
+print(ships.isna().sum())
+print()
+print("Duplicated rows:", ships.duplicated().sum())</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p><code>describe()</code> gives a quick summary of every number column:</p>
+
+  <div class="cell">
+    <textarea>
+ships.describe().round(1)</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    Look at the <code>count</code> row: <code>age</code> has fewer values than the other
+    columns (those are the missing ones). The <code>mean</code> of <code>survived</code> is
+    already a hint for question 1. Ages go from 1 to 71 and fares look sensible, so there
+    are no impossible values to fix.
+  </p>
+
+
+  <!-- =============================================================
+       STEP 4: CLEAN
+       ============================================================= -->
+  <h2>🧹 Step 4: Clean</h2>
+  <p>
+    Two fixes, both from Day 12. First remove the duplicated rows. Then fill the missing
+    ages with the <strong>median</strong> age (the middle value), which isn't pulled around by
+    a few very old or very young passengers. We keep <code>ships</code> as it was and store the
+    result in a new DataFrame called <code>clean</code>:
+  </p>
+
+  <div class="cell">
+    <textarea>
+clean = ships.drop_duplicates()
+
+median_age = clean["age"].median()
+clean["age"] = clean["age"].fillna(median_age)
+
+print("Median age used for the gaps:", median_age)
+print("Rows now:", len(clean))
+print("Missing ages now:", clean["age"].isna().sum())</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p class="note">
+    <strong>Is filling ages fair?</strong> It's a guess, and a guess changes the data a little.
+    The other choice is to drop those 30 passengers, but then we'd lose their sex, class
+    and survival too. Always write down which choice you made, so others know.
+  </p>
+
+
+  <!-- =============================================================
+       STEP 5: SURVIVAL RATES
+       ============================================================= -->
+  <h2>📊 Step 5: Survival rates</h2>
+  <p>
+    Here's a neat trick. <code>survived</code> holds only 0s and 1s, so its <strong>mean</strong> is
+    the share of 1s. For example, the mean of <code>[1, 0, 1, 1]</code> is 3 ÷ 4 = 0.75, which
+    means 75% survived. That share is called the <strong>survival rate</strong>.
+  </p>
+
+  <div class="cell">
+    <textarea>
+overall_rate = clean["survived"].mean()
+print(f"Overall survival rate: {overall_rate:.0%}")
+print("Survivors:", clean["survived"].sum(), "of", len(clean))</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    <code>:.0%</code> in an f-string turns a share like <code>0.41</code> into a percentage with 0
+    decimals: <code>41%</code>. Now question 2: group by <code>sex</code> and take the mean (Day 11):
+  </p>
+
+  <div class="cell">
+    <textarea>
+rate_by_sex = clean.groupby("sex")["survived"].mean()
+rate_by_sex.round(2)</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    A big difference: about two out of three women survived, but only about one in four men.
+    Question 3 is about class. We also look at the average fare, to check that first class
+    really was the expensive one:
+  </p>
+
+  <div class="cell">
+    <textarea>
+by_class = clean.groupby("pclass").agg(
+    passengers=("survived", "count"),
+    survival_rate=("survived", "mean"),
+    average_fare=("fare", "mean"),
+)
+by_class.round(2)</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    Column names must match exactly. There is no column called <code>class</code> (it's
+    <code>pclass</code>), so this gives a <code>KeyError</code>:
+  </p>
+
+  <div class="cell error-demo">
+    <textarea>
+clean.groupby("class")["survived"].mean()</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p class="muted small">When you meet a <code>KeyError</code> in pandas, print <code>clean.columns</code> and compare the spelling.</p>
+
+
+  <!-- =============================================================
+       AGE GROUPS
+       ============================================================= -->
+  <h2>👶 Age groups with <code>pd.cut</code></h2>
+  <p>
+    Question 4 is about children. Age is a number with many different values, so comparing
+    every single age would be messy. Instead we put ages into <strong>bins</strong> (ranges),
+    like sorting coins into jars. <code>pd.cut</code> does this. You give it the edges of the
+    bins and a label for each one:
+  </p>
+
+  <div class="cell">
+    <textarea>
+clean["age_group"] = pd.cut(
+    clean["age"],
+    bins=[0, 12, 18, 40, 60, 80],
+    labels=["child", "teen", "adult", "middle-aged", "senior"],
+    right=False,    # "child" = 0 up to (not including) 12
+)
+clean[["age", "age_group"]].head(6)</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    With <code>right=False</code>, the bin <code>child</code> means "0 or more, but under 12",
+    <code>teen</code> means 12 to 17, and so on. Now group by the new column:
+  </p>
+
+  <div class="cell">
+    <textarea>
+by_age = (clean.groupby("age_group", observed=True)["survived"]
+          .agg(["count", "mean"]))
+by_age.round(2)</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    <code>observed=True</code> tells pandas to show only the bins that really have passengers.
+    Children did best. But look at the <code>count</code> column too: only 4 seniors, so their
+    rate could easily change with a few more passengers. <strong>Small groups give shaky
+    rates.</strong>
+  </p>
+
+
+  <!-- =============================================================
+       TWO COLUMNS AT ONCE
+       ============================================================= -->
+  <h2>🧮 Sex and class together</h2>
+  <p>
+    Question 5 needs two columns at once. A <code>pivot_table</code> (Day 11) puts sex in the
+    rows, class in the columns, and the survival rate in each cell:
+  </p>
+
+  <div class="cell">
+    <textarea>
+table = clean.pivot_table(index="sex", columns="pclass",
+                          values="survived", aggfunc="mean")
+table.round(2)</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    Reading the table: first-class women did best (about 77%), and second- and third-class
+    men did worst (about 20%). Sex made a bigger difference than class.
+  </p>
+
+
+  <!-- =============================================================
+       STEP 6: CHARTS
+       ============================================================= -->
+  <h2>📈 Step 6: Charts</h2>
+  <p>
+    Numbers in a table are exact; a chart makes the difference obvious in one second.
+    First, two bar charts side by side (Day 13). Each chart box ends with
+    <code>plt.show()</code>, so the box shows only the chart and no leftover text:
+  </p>
+
+  <div class="cell">
+    <textarea>
+import matplotlib.pyplot as plt
+
+fig, (left, right) = plt.subplots(1, 2, figsize=(9, 3.5))
+
+left.bar(rate_by_sex.index, rate_by_sex.values, color=["tab:orange", "tab:blue"])
+left.set_title("Survival rate by sex")
+left.set_ylabel("share who survived")
+left.set_ylim(0, 1)
+
+right.bar(["1st", "2nd", "3rd"], by_class["survival_rate"], color="tab:green")
+right.set_title("Survival rate by class")
+right.set_ylim(0, 1)
+plt.show()</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    Next, two histograms on top of each other: the ages of passengers who survived and of those
+    who didn't. <code>alpha=0.6</code> makes the bars a bit see-through, so both stay visible:
+  </p>
+
+  <div class="cell">
+    <textarea>
+survivors = clean[clean["survived"] == 1]
+others = clean[clean["survived"] == 0]
+
+plt.figure(figsize=(7, 3.5))
+plt.hist(others["age"], bins=15, alpha=0.6, label="did not survive")
+plt.hist(survivors["age"], bins=15, alpha=0.6, label="survived")
+plt.title("Ages on the Northern Star (made-up data)")
+plt.xlabel("age")
+plt.ylabel("passengers")
+plt.legend()
+plt.show()</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    The tall bar near 30 comes partly from our cleaning: the 30 missing ages were all filled
+    with the median, 30. That's a side effect worth knowing about.
+  </p>
+  <p>
+    Last, a <strong>box plot</strong> of fares per class. It's a new chart type, but it shows
+    what you met on Day 14: the box goes from Q1 to Q3, the line inside is the median, and the
+    dots are outliers.
+  </p>
+
+  <div class="cell">
+    <textarea>
+fares = [clean[clean["pclass"] == c]["fare"] for c in [1, 2, 3]]
+
+plt.figure(figsize=(7, 3.5))
+plt.boxplot(fares, tick_labels=["1st", "2nd", "3rd"])
+plt.title("Ticket fare by class")
+plt.ylabel("fare (made-up pounds)")
+plt.show()</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+
+  <!-- =============================================================
+       STEP 7: FINDINGS
+       ============================================================= -->
+  <h2>📝 Step 7: Findings</h2>
+  <p>
+    The last step is to answer the questions in plain sentences that someone who never saw
+    the code can understand. Building them from the variables means they stay correct if the
+    data changes:
+  </p>
+
+  <div class="cell">
+    <textarea>
+best = table.stack().idxmax()     # the (sex, class) pair with the highest rate
+worst = table.stack().idxmin()    # ... and with the lowest
+
+women = rate_by_sex["female"]
+men = rate_by_sex["male"]
+first = by_class.loc[1, "survival_rate"]
+third = by_class.loc[3, "survival_rate"]
+children = by_age.loc["child", "mean"]
+
+print(f"1. Overall, {overall_rate:.0%} of the {len(clean)} passengers survived.")
+print(f"2. Women survived far more often: {women:.0%} vs {men:.0%} for men.")
+print(f"3. First class did best ({first:.0%}); 2nd and 3rd were lower ({third:.0%}).")
+print(f"4. Children under 12 survived {children:.0%} of the time.")
+print(f"5. Best group: {best[0]}s in class {best[1]}.")
+print(f"   Worst group: {worst[0]}s in class {worst[1]}.")</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    <code>table.stack()</code> turns the pivot table into one long column whose labels are
+    (sex, class) pairs, and <code>idxmax()</code> gives the <em>label</em> of the biggest value
+    (like <code>argmax</code> from Day 9, but it returns the name instead of the position).
+  </p>
+  <p class="note">
+    <strong>Careful with "why":</strong> the data shows <em>that</em> women and first-class
+    passengers survived more often. It doesn't prove <em>why</em> (Day 14: correlation is not
+    causation). In our made-up ship we know the reason, because we wrote it into the
+    <code>chance</code> line of the first box. In real data you never get to read that line.
+  </p>
+
+
+  <!-- =============================================================
+       COMMON MISTAKES + RECAP
+       ============================================================= -->
+  <h2>⚠️ Common mistakes</h2>
+  <ul>
+    <li>Calculating before cleaning: duplicated rows count some passengers twice.</li>
+    <li>Forgetting that the mean of a 0/1 column is a <em>share</em> (0.41), not a count. Multiply by 100 or use <code>:.0%</code> for a percentage.</li>
+    <li>Misspelling a column (<code>"class"</code> instead of <code>"pclass"</code>) → <code>KeyError</code>.</li>
+    <li>Trusting a rate from a tiny group (4 seniors) as much as one from 259 adults.</li>
+    <li>Saying one thing <em>causes</em> another just because they go together.</li>
+  </ul>
+
+  <h2>✅ Recap</h2>
+  <ul>
+    <li>A mini-project follows the EDA routine: questions → inspect → clean → calculate → chart → findings.</li>
+    <li><code>drop_duplicates()</code> and <code>fillna(median)</code> fix the two classic glitches.</li>
+    <li>The mean of a 0/1 column is a rate; <code>groupby(...)["survived"].mean()</code> gives a rate per group.</li>
+    <li><code>pd.cut(column, bins=..., labels=...)</code> sorts numbers into named ranges.</li>
+    <li><code>pivot_table</code> compares two columns at once; <code>idxmax()</code> finds the label of the biggest value.</li>
+    <li>Findings are plain sentences, built from variables, and careful about cause and effect.</li>
+  </ul>
+
+
+  <!-- =============================================================
+       EXERCISES
+       Each exercise has: a task, a starting code box, hints,
+       hidden tests (<script class="tests">) and a solution
+       (<script class="solution">). The tests are Python "assert" lines
+       and can look at the variables the answer created.
+       ============================================================= -->
+  <h2>🏋️ Exercises</h2>
+  <p class="screen-only">
+    Write your answer in the box and click <strong>✓ Check my answer</strong>. Stuck? Use the
+    hints. After 3 tries you can see a solution. Each exercise box starts from its own data,
+    because exercises don't see the lesson's variables.
+  </p>
+  <p class="print-only">
+    Write your answer in the space under each exercise. Try it on the computer too, by opening
+    this day's <code>index.html</code>. Solutions are in the answer key at the end.
+  </p>
+
+  <div class="score">
+    <div class="bar"><div id="score-bar"></div></div>
+    <span id="score-text" class="muted small">0 / 5 done</span>
+  </div>
+
+
+  <!-- Exercise 1 -->
+  <section class="exercise" id="clean-ships">
+    <h3>1. Clean the passenger list</h3>
+    <p>
+      The starter contains a made-up list of 8 passengers with the same two glitches as the
+      lesson: one row appears twice and some ages are missing. Make a DataFrame called
+      <code>clean</code> with the duplicate <strong>removed</strong> and the missing ages
+      <strong>filled with the median age</strong>.
+    </p>
+    <textarea>
+import pandas as pd
+import numpy as np
+
+passengers = pd.DataFrame({
+    "passenger_id": [1, 2, 3, 4, 5, 6, 7, 3],
+    "sex": ["female", "male", "male", "female", "male", "female", "male", "male"],
+    "age": [29, np.nan, 41, 8, np.nan, 35, 22, 41],
+    "survived": [1, 0, 0, 1, 0, 1, 1, 0],
+})
+
+# Make clean: no duplicates, missing ages filled with the median
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden>Start with <code>clean = passengers.drop_duplicates()</code>.</li>
+      <li hidden>Calculate the median <em>after</em> removing duplicates: <code>clean["age"].median()</code>.</li>
+      <li hidden><code>clean["age"] = clean["age"].fillna(clean["age"].median())</code></li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+assert "clean" in globals(), "Create a DataFrame called clean."
+assert isinstance(clean, pd.DataFrame), "clean should be a DataFrame (the result of drop_duplicates)."
+assert clean.duplicated().sum() == 0, "clean still has a duplicated row. Use drop_duplicates()."
+assert len(clean) == 7, f"clean should have 7 rows (8 minus the duplicate), but it has {len(clean)}."
+assert clean["age"].isna().sum() == 0, "Some ages are still missing. Fill them with fillna()."
+assert sorted(clean["age"].tolist()) == [8, 22, 29, 29, 29, 35, 41], "The gaps should be filled with the median of the ages left after removing the duplicate (29)."
+assert "fillna" in __code__, "Use fillna() to fill the missing ages."
+</script>
+<script type="text/python" class="solution">
+import pandas as pd
+import numpy as np
+
+passengers = pd.DataFrame({
+    "passenger_id": [1, 2, 3, 4, 5, 6, 7, 3],
+    "sex": ["female", "male", "male", "female", "male", "female", "male", "male"],
+    "age": [29, np.nan, 41, 8, np.nan, 35, 22, 41],
+    "survived": [1, 0, 0, 1, 0, 1, 1, 0],
+})
+
+clean = passengers.drop_duplicates()
+clean["age"] = clean["age"].fillna(clean["age"].median())
+</script>
+  </section>
+
+
+  <!-- Exercise 2 -->
+  <section class="exercise" id="rate-by-sex">
+    <h3>2. Survival rate by sex</h3>
+    <p>
+      Using the made-up sample of 10 passengers, store the survival rate of each sex in a
+      variable called <code>rate_by_sex</code> (one value for <code>"female"</code>, one for
+      <code>"male"</code>). Use <code>groupby</code>; don't count by hand.
+    </p>
+    <textarea>
+import pandas as pd
+
+sample = pd.DataFrame({
+    "sex": ["female", "male", "male", "female", "male",
+            "female", "male", "male", "female", "male"],
+    "pclass": [1, 3, 2, 3, 1, 2, 3, 3, 1, 2],
+    "survived": [1, 0, 0, 1, 1, 1, 0, 0, 0, 0],
+})
+
+# Store the survival rate per sex in rate_by_sex
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden>The mean of a 0/1 column is the survival rate.</li>
+      <li hidden>Group by <code>"sex"</code>, pick the <code>"survived"</code> column, then take the mean.</li>
+      <li hidden><code>rate_by_sex = sample.groupby("sex")["survived"].mean()</code></li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+assert "rate_by_sex" in globals(), "Create a variable called rate_by_sex."
+assert "groupby" in __code__, "Use groupby to calculate the rates."
+expected = sample.groupby("sex")["survived"].mean()
+for s in ["female", "male"]:
+    assert s in rate_by_sex.index, f"rate_by_sex should have a value for {s!r}. Did you group by \"sex\"?"
+    assert abs(rate_by_sex[s] - expected[s]) < 0.001, f"The rate for {s} should be {expected[s]:.2f}, but it is {rate_by_sex[s]}. Did you take the mean of survived?"
+</script>
+<script type="text/python" class="solution">
+import pandas as pd
+
+sample = pd.DataFrame({
+    "sex": ["female", "male", "male", "female", "male",
+            "female", "male", "male", "female", "male"],
+    "pclass": [1, 3, 2, 3, 1, 2, 3, 3, 1, 2],
+    "survived": [1, 0, 0, 1, 1, 1, 0, 0, 0, 0],
+})
+
+rate_by_sex = sample.groupby("sex")["survived"].mean()
+print(rate_by_sex)
+</script>
+  </section>
+
+
+  <!-- Exercise 3 -->
+  <section class="exercise" id="rate-by-class">
+    <h3>3. Which class did best?</h3>
+    <p>
+      With the same sample, store the survival rate per class in <code>rate_by_class</code>.
+      Then store the number of the class with the highest rate in <code>best_class</code>
+      (it should be <code>1</code>, <code>2</code> or <code>3</code>).
+    </p>
+    <textarea>
+import pandas as pd
+
+sample = pd.DataFrame({
+    "sex": ["female", "male", "male", "female", "male",
+            "female", "male", "male", "female", "male"],
+    "pclass": [1, 3, 2, 3, 1, 2, 3, 3, 1, 2],
+    "survived": [1, 0, 0, 1, 1, 1, 0, 0, 0, 0],
+})
+
+# rate_by_class = ...
+# best_class = ...
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden>Same as exercise 2, but group by <code>"pclass"</code>.</li>
+      <li hidden><code>idxmax()</code> gives the label (here the class number) of the biggest value.</li>
+      <li hidden><code>best_class = rate_by_class.idxmax()</code></li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+assert "rate_by_class" in globals(), "Create a variable called rate_by_class."
+expected = sample.groupby("pclass")["survived"].mean()
+for c in [1, 2, 3]:
+    assert c in rate_by_class.index, f"rate_by_class should have a value for class {c}. Did you group by \"pclass\"?"
+    assert abs(rate_by_class[c] - expected[c]) < 0.001, f"The rate for class {c} should be {expected[c]:.2f}, but it is {rate_by_class[c]}."
+assert "best_class" in globals(), "Create a variable called best_class."
+assert best_class == expected.idxmax(), f"best_class should be the class with the highest rate, but it is {best_class}."
+assert "idxmax" in __code__ or "sort_values" in __code__ or "nlargest" in __code__, "Find best_class with code (for example idxmax()), don't type the number."
+</script>
+<script type="text/python" class="solution">
+import pandas as pd
+
+sample = pd.DataFrame({
+    "sex": ["female", "male", "male", "female", "male",
+            "female", "male", "male", "female", "male"],
+    "pclass": [1, 3, 2, 3, 1, 2, 3, 3, 1, 2],
+    "survived": [1, 0, 0, 1, 1, 1, 0, 0, 0, 0],
+})
+
+rate_by_class = sample.groupby("pclass")["survived"].mean()
+best_class = rate_by_class.idxmax()
+print(rate_by_class)
+print("Best class:", best_class)
+</script>
+  </section>
+
+
+  <!-- Exercise 4 -->
+  <section class="exercise" id="children">
+    <h3>4. Were children safer?</h3>
+    <p>
+      Store the survival rate of passengers <strong>under 12</strong> in <code>child_rate</code>
+      and of everyone <strong>12 or older</strong> in <code>adult_rate</code>. Then print a line
+      like <code>Children: 67%, others: 43%</code> (use <code>:.0%</code>).
+    </p>
+    <textarea>
+import pandas as pd
+
+kids = pd.DataFrame({
+    "age": [4, 35, 9, 52, 27, 11, 40, 19, 63, 30],
+    "survived": [1, 0, 1, 1, 0, 0, 1, 0, 0, 1],
+})
+
+# child_rate = ...
+# adult_rate = ...
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden>Filter first: <code>kids[kids["age"] &lt; 12]</code> keeps only the children.</li>
+      <li hidden>Then take the mean of their <code>"survived"</code> column. For the others use <code>&gt;= 12</code>.</li>
+      <li hidden><code>print(f"Children: {child_rate:.0%}, others: {adult_rate:.0%}")</code></li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+assert "child_rate" in globals(), "Create a variable called child_rate."
+assert "adult_rate" in globals(), "Create a variable called adult_rate."
+exp_child = kids[kids["age"] < 12]["survived"].mean()
+exp_adult = kids[kids["age"] >= 12]["survived"].mean()
+assert abs(child_rate - exp_child) < 0.001, f"child_rate should be {exp_child:.2f}, but it is {child_rate}. Use age < 12."
+assert abs(adult_rate - exp_adult) < 0.001, f"adult_rate should be {exp_adult:.2f}, but it is {adult_rate}. Use age >= 12."
+assert "12" in __code__, "Filter the ages with code (age < 12), don't type the rates."
+line = f"Children: {exp_child:.0%}, others: {exp_adult:.0%}"
+assert line in __lines__, f"Print the line exactly like: {line}"
+</script>
+<script type="text/python" class="solution">
+import pandas as pd
+
+kids = pd.DataFrame({
+    "age": [4, 35, 9, 52, 27, 11, 40, 19, 63, 30],
+    "survived": [1, 0, 1, 1, 0, 0, 1, 0, 0, 1],
+})
+
+child_rate = kids[kids["age"] < 12]["survived"].mean()
+adult_rate = kids[kids["age"] >= 12]["survived"].mean()
+print(f"Children: {child_rate:.0%}, others: {adult_rate:.0%}")
+</script>
+  </section>
+
+
+  <!-- Exercise 5 -->
+  <section class="exercise" id="best-and-worst">
+    <h3>5. Challenge: best and worst group</h3>
+    <p>
+      Back to the full <em>Northern Star</em> list. The starter builds and cleans it for you.
+      Find the combination of <strong>sex and class</strong> with the highest survival rate
+      and the one with the lowest. Store them as pairs in <code>best_group</code> and
+      <code>worst_group</code>, for example <code>("female", 1)</code>.
+    </p>
+    <p class="muted small">Your code should still work if the data changes, so let pandas find the answer.</p>
+    <textarea>
+import numpy as np
+import pandas as pd
+
+# --- The Northern Star data (made up), same as in the lesson ---
+rng = np.random.default_rng(42)
+n = 400
+pclass = rng.choice([1, 2, 3], size=n, p=[0.25, 0.25, 0.5])
+sex = rng.choice(["female", "male"], size=n, p=[0.4, 0.6])
+age = np.round(rng.normal(30, 13, size=n).clip(1, 75))
+fare = np.where(pclass == 1, rng.normal(85, 25, n),
+       np.where(pclass == 2, rng.normal(25, 8, n), rng.normal(10, 4, n)))
+fare = np.round(fare.clip(4, None), 2)
+embarked = rng.choice(["S", "C", "Q"], size=n, p=[0.7, 0.2, 0.1])
+chance = 0.12 + 0.45 * (sex == "female") + 0.2 * (pclass == 1) + 0.08 * (pclass == 2) + 0.15 * (age &lt; 12)
+survived = (rng.random(n) &lt; chance.clip(0, 0.95)).astype(int)
+ships = pd.DataFrame({"passenger_id": np.arange(1, n + 1), "pclass": pclass,
+                      "sex": sex, "age": age, "fare": fare,
+                      "embarked": embarked, "survived": survived})
+missing = rng.choice(n, size=30, replace=False)
+ships.loc[missing, "age"] = np.nan
+ships = pd.concat([ships, ships.iloc[[5, 17, 42]]], ignore_index=True)
+clean = ships.drop_duplicates()
+# --- End of the data ---
+
+# best_group = ...
+# worst_group = ...
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden>You can group by two columns at once: <code>clean.groupby(["sex", "pclass"])["survived"].mean()</code>. Its labels are (sex, class) pairs.</li>
+      <li hidden><code>idxmax()</code> gives the label of the highest value, <code>idxmin()</code> of the lowest.</li>
+      <li hidden><code>rates = clean.groupby(["sex", "pclass"])["survived"].mean()</code>, then <code>best_group = rates.idxmax()</code> and <code>worst_group = rates.idxmin()</code>.</li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+assert "best_group" in globals(), "Create a variable called best_group."
+assert "worst_group" in globals(), "Create a variable called worst_group."
+rates = clean.groupby(["sex", "pclass"])["survived"].mean()
+assert "groupby" in __code__ or "pivot_table" in __code__, "Let pandas calculate the rates with groupby or pivot_table."
+assert tuple(best_group) == rates.idxmax(), f"best_group should be the (sex, class) pair with the highest rate, but it is {best_group}."
+assert tuple(worst_group) == rates.idxmin(), f"worst_group should be the (sex, class) pair with the lowest rate, but it is {worst_group}."
+</script>
+<script type="text/python" class="solution">
+import numpy as np
+import pandas as pd
+
+# --- The Northern Star data (made up), same as in the lesson ---
+rng = np.random.default_rng(42)
+n = 400
+pclass = rng.choice([1, 2, 3], size=n, p=[0.25, 0.25, 0.5])
+sex = rng.choice(["female", "male"], size=n, p=[0.4, 0.6])
+age = np.round(rng.normal(30, 13, size=n).clip(1, 75))
+fare = np.where(pclass == 1, rng.normal(85, 25, n),
+       np.where(pclass == 2, rng.normal(25, 8, n), rng.normal(10, 4, n)))
+fare = np.round(fare.clip(4, None), 2)
+embarked = rng.choice(["S", "C", "Q"], size=n, p=[0.7, 0.2, 0.1])
+chance = 0.12 + 0.45 * (sex == "female") + 0.2 * (pclass == 1) + 0.08 * (pclass == 2) + 0.15 * (age < 12)
+survived = (rng.random(n) < chance.clip(0, 0.95)).astype(int)
+ships = pd.DataFrame({"passenger_id": np.arange(1, n + 1), "pclass": pclass,
+                      "sex": sex, "age": age, "fare": fare,
+                      "embarked": embarked, "survived": survived})
+missing = rng.choice(n, size=30, replace=False)
+ships.loc[missing, "age"] = np.nan
+ships = pd.concat([ships, ships.iloc[[5, 17, 42]]], ignore_index=True)
+clean = ships.drop_duplicates()
+# --- End of the data ---
+
+rates = clean.groupby(["sex", "pclass"])["survived"].mean()
+best_group = rates.idxmax()
+worst_group = rates.idxmin()
+print("Best:", best_group, "Worst:", worst_group)
+</script>
+  </section>
+
+
+  <!-- Shown when all exercises are done -->
+  <section id="finished" class="finished" hidden>
+    <h2>🏆 Day 15 complete!</h2>
+    <p>
+      You took a messy dataset from questions to findings, all on your own. That's a full
+      data analysis, and the end of the Data Science phase. Well done!
+    </p>
+  </section>
+
+
+  <!-- =============================================================
+       TOMORROW
+       ============================================================= -->
+  <h2>🔜 Tomorrow</h2>
+  <p>
+    <strong>What is machine learning?</strong> Today <em>you</em> found the patterns in the
+    data. Tomorrow you'll start the Machine Learning phase and let the computer find patterns
+    by itself: you'll learn what <em>features</em> and <em>labels</em> are, split data into a
+    training part and a test part, and train your very first model with scikit-learn.
+  </p>
+
+
+  <footer class="screen-only">
+    <p>
+      Your answers are saved in this browser only. Python downloads the first time you open
+      the page, so you need an internet connection.
+    </p>
+    <button id="erase-progress" class="quiet">Erase my answers for this day</button>
+  </footer>
+
+</main>
+
+<!-- Shows whether Python is loading or ready -->
+<div id="python-status" role="status"></div>
+
+<script src="script.js"></script>
+</body>
+</html>

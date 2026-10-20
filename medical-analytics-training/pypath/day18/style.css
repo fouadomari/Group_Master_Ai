@@ -1,0 +1,576 @@
+/*
+ * PyPath — page styles
+ * ====================
+ * The same style.css is used by every day.
+ * Colours are defined once at the top as variables, with a second set for
+ * dark mode (used automatically when the computer is set to dark mode).
+ */
+
+
+/* ---------- Colours ---------- */
+
+:root {
+  --page:         #f6f7fb;   /* page background */
+  --card:         #ffffff;   /* boxes on the page */
+  --soft:         #eef1f7;   /* light grey fills */
+  --text:         #1c2333;
+  --muted:        #5d6679;   /* secondary text */
+  --line:         #dfe3ec;   /* borders */
+  --blue:         #2563eb;   /* buttons and links */
+  --blue-soft:    #e6eefe;
+  --green:        #157f3b;   /* correct answers */
+  --green-soft:   #e5f6eb;
+  --red:          #b42318;   /* errors */
+  --red-soft:     #fdeceb;
+  --yellow-soft:  #fff6dc;   /* hints and notes */
+  --code-bg:      #f8f9fb;
+
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, sans-serif;
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page:        #0f131a;
+    --card:        #171c25;
+    --soft:        #1f2531;
+    --text:        #e6e9ef;
+    --muted:       #9aa3b5;
+    --line:        #2c3341;
+    --blue:        #6b9bf2;
+    --blue-soft:   #1b2a47;
+    --green:       #4ade80;
+    --green-soft:  #15301f;
+    --red:         #f87171;
+    --red-soft:    #3a1a1a;
+    --yellow-soft: #3a3010;
+    --code-bg:     #12161e;
+  }
+}
+
+
+/* ---------- Page layout ---------- */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--text);
+  font: 17px/1.65 var(--font);
+}
+
+main {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 32px 16px 96px;
+}
+
+h1 {
+  font-size: 2rem;
+  line-height: 1.2;
+  margin: 4px 0 8px;
+}
+
+h2 {
+  font-size: 1.4rem;
+  margin: 48px 0 12px;
+}
+
+h3 {
+  font-size: 1.15rem;
+  margin: 0;
+}
+
+a {
+  color: var(--blue);
+}
+
+code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+  background: var(--soft);
+  padding: 0.1em 0.35em;
+  border-radius: 5px;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.small {
+  font-size: 0.875rem;
+}
+
+
+/* ---------- Lesson header ---------- */
+
+.lesson-header {
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.lesson-header .tools {
+  display: flex;
+  justify-content: flex-end;
+}
+
+
+/* ---------- Tables (e.g. the operators table) ---------- */
+
+table {
+  border-collapse: collapse;
+  margin: 16px 0;
+  display: block;
+  overflow-x: auto;          /* scroll sideways on narrow phones */
+}
+
+th,
+td {
+  border: 1px solid var(--line);
+  padding: 6px 14px;
+  text-align: left;
+}
+
+th {
+  background: var(--soft);
+}
+
+
+/* ---------- Notes and tips ---------- */
+
+.note {
+  background: var(--yellow-soft);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin: 16px 0;
+}
+
+
+/* ---------- Buttons ---------- */
+
+button {
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--text);
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: var(--soft);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+button:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+/* The main action of a box: Run or Check */
+button.run,
+button.check {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+}
+
+button.run:hover:not(:disabled),
+button.check:hover:not(:disabled) {
+  background: var(--blue);
+  filter: brightness(1.1);
+}
+
+/* Quiet buttons: Reset, Hint, Show solution… */
+button.quiet {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+}
+
+button.quiet:hover:not(:disabled) {
+  color: var(--text);
+}
+
+
+/* ---------- Code boxes ---------- */
+
+.cell {
+  margin: 16px 0 28px;
+}
+
+textarea {
+  display: block;
+  width: 100%;
+  min-height: 3.2em;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--code-bg);
+  color: var(--text);
+  font: 15px/1.5 var(--mono);
+  tab-size: 4;
+  resize: vertical;
+  overflow: hidden;
+}
+
+textarea:focus {
+  border-color: var(--blue);
+}
+
+/* The row of buttons under a code box */
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.buttons .shortcut {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* "This example has a mistake on purpose" label */
+.cell.error-demo::before {
+  content: "💡 This example has a mistake on purpose. Run it and read the error.";
+  display: block;
+  background: var(--yellow-soft);
+  border-radius: 8px;
+  padding: 6px 12px;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+
+/* ---------- Output under a code box ---------- */
+
+.output:not(:empty) {
+  margin-top: 10px;
+  padding-left: 12px;
+  border-left: 3px solid var(--line);
+}
+
+.output pre {
+  margin: 4px 0;
+  font: 14px/1.5 var(--mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.output pre[data-kind="warning"] {
+  color: var(--muted);
+}
+
+.output img {
+  max-width: 100%;
+  background: #fff;
+  border-radius: 8px;
+}
+
+.output-table {
+  overflow-x: auto;
+  font-size: 14px;
+}
+
+/* Error message box */
+.error {
+  background: var(--red-soft);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin: 8px 0;
+}
+
+.error strong {
+  color: var(--red);
+}
+
+.error p {
+  margin: 4px 0 8px;
+}
+
+.error pre {
+  margin: 0;
+  font: 13px/1.5 var(--mono);
+  white-space: pre-wrap;
+}
+
+
+/* ---------- Exercises ---------- */
+
+.score {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.score .bar {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--soft);
+  overflow: hidden;
+}
+
+.score .bar div {
+  height: 100%;
+  width: 0;
+  background: var(--green);
+  transition: width 0.3s;
+}
+
+.exercise {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 18px;
+  margin: 18px 0;
+}
+
+/* Turns green once solved */
+.exercise.passed {
+  border-color: var(--green);
+}
+
+.exercise.passed h3::after {
+  content: " ✓";
+  color: var(--green);
+}
+
+.hints {
+  margin: 12px 0 0;
+  padding-left: 24px;
+}
+
+.hints li {
+  background: var(--yellow-soft);
+  border-radius: 8px;
+  padding: 6px 12px;
+  margin: 6px 0;
+}
+
+.result {
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-top: 10px;
+  font-weight: 600;
+}
+
+.result.good {
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.result.bad {
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.solution-box {
+  margin-top: 12px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+.solution-box pre {
+  font: 14px/1.5 var(--mono);
+  margin: 8px 0;
+  white-space: pre-wrap;
+}
+
+/* The tests and solution live in the page but are never shown directly */
+script.tests,
+script.solution {
+  display: none;
+}
+
+
+/* ---------- End of the day ---------- */
+
+.finished {
+  text-align: center;
+  background: var(--green-soft);
+  border-radius: 14px;
+  padding: 20px;
+  margin-top: 32px;
+}
+
+footer {
+  margin-top: 64px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+
+/* ---------- "Python is ready" status (bottom corner) ---------- */
+
+#python-status {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  max-width: calc(100% - 24px);
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  font-size: 0.8rem;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 12%);
+}
+
+#python-status[data-state="error"] {
+  color: var(--red);
+}
+
+
+/* ---------- Phones ---------- */
+
+@media (max-width: 600px) {
+  body {
+    font-size: 16px;
+  }
+
+  h1 {
+    font-size: 1.6rem;
+  }
+
+  .buttons .shortcut {
+    display: none;
+  }
+}
+
+
+/* ---------- Printing / PDF ----------
+ * Used when the page is printed (Ctrl+P) or turned into a PDF.
+ * Buttons are hidden, hints are shown, and boxes don't split across pages.
+ */
+
+@media print {
+  :root {
+    --page: #ffffff;
+    --card: #ffffff;
+    --text: #000000;
+  }
+
+  body {
+    font-size: 11pt;
+  }
+
+  main {
+    max-width: none;
+    padding: 0;
+  }
+
+  h2 {
+    margin-top: 28px;
+    break-after: avoid;
+  }
+
+  /* Things that only make sense on screen */
+  .buttons,
+  .lesson-header .tools,
+  #python-status,
+  .score,
+  .solution-box,
+  #finished,
+  footer button {
+    display: none !important;
+  }
+
+  /* Show all hints in print */
+  .exercise .hints[hidden] {
+    display: block;
+  }
+
+  .exercise .hints li[hidden] {
+    display: list-item;
+  }
+
+  .exercise .hints::before {
+    content: "Hints:";
+    font-weight: 600;
+    margin-left: -24px;
+  }
+
+  /* Code boxes: the PDF tool turns each one into <pre class="code"> */
+  pre.code {
+    margin: 0;
+    padding: 10px 12px;
+    border: 1px solid #bbb;
+    border-radius: 10px;
+    background: var(--code-bg);
+    font: 9.5pt/1.5 var(--mono);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  /* Keep each example, exercise and table on one page when possible */
+  .cell,
+  .exercise,
+  table,
+  .note,
+  .error {
+    break-inside: avoid;
+  }
+
+  .exercise {
+    border-color: #bbb;
+  }
+
+  /* Space under each exercise to write an answer by hand */
+  .exercise::after {
+    content: "";
+    display: block;
+    height: 90px;
+    margin-top: 10px;
+    border: 1px dashed #bbb;
+    border-radius: 8px;
+  }
+
+  /* The answer key added at the end of a PDF */
+  .answer-key {
+    break-before: page;
+  }
+
+  .answer-key pre {
+    font: 10pt/1.5 var(--mono);
+    background: var(--code-bg);
+    border: 1px solid #bbb;
+    border-radius: 8px;
+    padding: 8px 12px;
+    white-space: pre-wrap;
+    break-inside: avoid;
+  }
+}
+
+
+/* Text meant only for the screen or only for paper */
+.print-only {
+  display: none;
+}
+
+@media print {
+  .screen-only {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block;
+  }
+}

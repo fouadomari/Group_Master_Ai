@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Day 22: Mini-project: survival predictor · PyPath</title>
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Python for the browser (Pyodide). Downloaded the first time, then cached. -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v314.0.7/full/pyodide.js"></script>
+</head>
+
+<body data-day="day22">
+<main>
+
+  <!-- =============================================================
+       HEADER
+       ============================================================= -->
+  <header class="lesson-header">
+    <p class="muted small">Machine Learning · Day 22 of 30 · about 60 minutes</p>
+    <h1>Mini-project: survival predictor</h1>
+    <div class="tools">
+      <button id="reset-variables" class="quiet" title="Forget all variables created by this page's code boxes">↺ Forget variables</button>
+    </div>
+  </header>
+
+
+  <!-- =============================================================
+       TODAY'S GOAL
+       ============================================================= -->
+  <h2>🎯 Today's goal</h2>
+  <p>Today you build one complete machine learning project, from raw table to predictions. You will:</p>
+  <ul>
+    <li><strong>clean</strong> the <em>Northern Star</em> passenger list from Day 15</li>
+    <li>turn text columns into numbers (<strong>features</strong>), including <code>pd.get_dummies</code></li>
+    <li>split the data, set a <strong>baseline</strong>, and train logistic regression and a random forest</li>
+    <li><strong>evaluate</strong> them honestly: accuracy, confusion matrix, precision, recall, cross-validation</li>
+    <li><strong>predict</strong> for new made-up passengers, and think about the limits of the model</li>
+  </ul>
+
+
+  <!-- =============================================================
+       WHY THIS MATTERS
+       ============================================================= -->
+  <h2>🤔 Why this matters</h2>
+  <p>
+    Cooking lessons teach you to chop, fry and season. At some point you cook a whole meal,
+    and you find out how the steps fit together. Today is that meal for the Machine Learning
+    phase: every step from Days 16–21 in the right order.
+  </p>
+  <p>
+    The <em>Northern Star</em> is a <strong>made-up</strong> ship. Its passenger list is
+    inspired by the famous Titanic dataset, a classic first project for data scientists, but
+    every passenger and number here is invented by our own code. Because we wrote the code
+    that made the data, we can even check how close our model gets to the "truth".
+  </p>
+  <p class="note screen-only">
+    <strong>Remember:</strong> the code boxes on this page share their variables, like pages of
+    one notebook. Run them <strong>from top to bottom</strong>. The first box needs a few extra
+    seconds to load pandas.
+  </p>
+
+
+  <!-- =============================================================
+       STEP 1: DATA
+       ============================================================= -->
+  <h2>🚢 Step 1: the passenger list</h2>
+  <p>
+    This is exactly the same code as on Day 15. It makes up 400 passengers with a class
+    (1st, 2nd, 3rd), sex, age, fare, port of embarkation (S, C or Q) and whether they survived.
+    Look at the line with <code>chance</code>: in our made-up world, women, 1st class and
+    children had better chances. It also plants some glitches to clean.
+  </p>
+
+  <div class="cell">
+    <textarea>
+import numpy as np
+import pandas as pd
+
+rng = np.random.default_rng(42)
+n = 400
+pclass = rng.choice([1, 2, 3], size=n, p=[0.25, 0.25, 0.5])
+sex = rng.choice(["female", "male"], size=n, p=[0.4, 0.6])
+age = np.round(rng.normal(30, 13, size=n).clip(1, 75))
+fare = np.where(pclass == 1, rng.normal(85, 25, n),
+       np.where(pclass == 2, rng.normal(25, 8, n), rng.normal(10, 4, n)))
+fare = np.round(fare.clip(4, None), 2)
+embarked = rng.choice(["S", "C", "Q"], size=n, p=[0.7, 0.2, 0.1])
+chance = 0.12 + 0.45 * (sex == "female") + 0.2 * (pclass == 1) + 0.08 * (pclass == 2) + 0.15 * (age &lt; 12)
+survived = (rng.random(n) &lt; chance.clip(0, 0.95)).astype(int)
+
+ships = pd.DataFrame({
+    "passenger_id": np.arange(1, n + 1),
+    "pclass": pclass,
+    "sex": sex,
+    "age": age,
+    "fare": fare,
+    "embarked": embarked,
+    "survived": survived,
+})
+# Deliberate glitches to clean: 30 missing ages and 3 duplicated rows
+missing = rng.choice(n, size=30, replace=False)
+ships.loc[missing, "age"] = np.nan
+ships = pd.concat([ships, ships.iloc[[5, 17, 42]]], ignore_index=True)
+print("Rows and columns:", ships.shape)
+ships.head()</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>A quick check, as in every EDA (Day 14): what is missing, what is duplicated, and how common is survival?</p>
+
+  <div class="cell">
+    <textarea>
+print("Missing values per column:")
+print(ships.isna().sum())
+print("Duplicated rows:", ships.duplicated().sum())
+print(f"Survival rate: {ships['survived'].mean():.2f}")
+ships.groupby("sex")["survived"].mean().round(2)</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+
+  <!-- =============================================================
+       STEP 2: CLEAN
+       ============================================================= -->
+  <h2>🧹 Step 2: clean</h2>
+  <p>
+    Two glitches: 3 duplicated rows and 30 missing ages. Models can't handle missing values,
+    so we fill each one with the <strong>median</strong> age (Day 12). The median isn't pulled
+    around by a few very old or very young passengers.
+  </p>
+
+  <div class="cell">
+    <textarea>
+ships = ships.drop_duplicates()
+median_age = ships["age"].median()
+ships["age"] = ships["age"].fillna(median_age)
+
+print("Rows now:", len(ships))
+print("Missing ages now:", ships["age"].isna().sum(), f"(filled with {median_age})")</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+
+  <!-- =============================================================
+       STEP 3: FEATURES
+       ============================================================= -->
+  <h2>🔢 Step 3: turn everything into numbers</h2>
+  <p>
+    Models only do maths, so text columns must become numbers. <code>sex</code> has just two
+    values, so <code>female → 1</code>, <code>male → 0</code> works well, using
+    <code>.map()</code> with a dict (Day 3) that says which value becomes which.
+  </p>
+  <p>
+    <code>embarked</code> has three ports: S, C and Q. Writing S=0, C=1, Q=2 would be a
+    mistake: the model would think Q is "twice as much" as C, which means nothing. Instead
+    we make one yes/no column per port, called <strong>one-hot encoding</strong> (exactly one
+    of the columns is "hot", 1, in each row). <code>pd.get_dummies</code> does it for us:
+  </p>
+
+  <div class="cell">
+    <textarea>
+ships["sex"] = ships["sex"].map({"male": 0, "female": 1})
+
+data = pd.get_dummies(ships, columns=["embarked"], dtype=int)
+print("Columns now:", list(data.columns))
+data[["sex", "embarked_C", "embarked_Q", "embarked_S"]].head()</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    Now we choose <code>X</code> and <code>y</code>. The label is <code>survived</code>. We
+    also drop <code>passenger_id</code>: it's just a counter, so it can't explain survival,
+    and a model might "memorise" IDs instead of learning real patterns.
+  </p>
+
+  <div class="cell">
+    <textarea>
+from sklearn.model_selection import train_test_split
+
+X = data.drop(columns=["passenger_id", "survived"])
+y = data["survived"]
+print("Features:", list(X.columns))
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.25, random_state=42, stratify=y)
+print("Train rows:", len(X_train), " Test rows:", len(X_test))
+print(f"Survival rate in train: {y_train.mean():.2f}, in test: {y_test.mean():.2f}")</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p class="muted small"><code>stratify=y</code> keeps the same survival rate in both parts (Day 16).</p>
+
+
+  <!-- =============================================================
+       STEP 4: MODELS
+       ============================================================= -->
+  <h2>🤖 Step 4: baseline, then two models</h2>
+  <p>
+    First the <strong>baseline</strong>: a "model" that always predicts the most common answer
+    (did not survive). Any real model must beat it, or it's useless.
+  </p>
+
+  <div class="cell">
+    <textarea>
+from sklearn.dummy import DummyClassifier
+
+baseline = DummyClassifier(strategy="most_frequent")
+baseline.fit(X_train, y_train)
+baseline_acc = baseline.score(X_test, y_test)
+print(f"Baseline accuracy: {baseline_acc:.2f}")</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    Now logistic regression with scaling (Day 18). After training, its <code>coef_</code>
+    (coefficients) show the direction of each feature: <strong>positive</strong> pushes
+    towards "survived", <strong>negative</strong> pushes against it. Because the features are
+    scaled, the sizes can be compared.
+  </p>
+
+  <div class="cell">
+    <textarea>
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+
+logreg = make_pipeline(StandardScaler(), LogisticRegression(max_iter=1000))
+logreg.fit(X_train, y_train)
+print(f"Logistic regression test accuracy: {logreg.score(X_test, y_test):.2f}")
+
+coefficients = pd.Series(logreg[-1].coef_[0], index=X.columns)
+coefficients.sort_values().round(2)</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p class="muted small">
+    <code>logreg[-1]</code> is the last step of the pipeline, the LogisticRegression itself.
+  </p>
+  <p>
+    The model rediscovered our made-up rules: being female (<code>sex</code> = 1) helps a lot,
+    and a higher <code>pclass</code> number (3rd class) hurts. Next, a random forest (Day 19).
+    We limit <code>max_depth=4</code> so the trees can't memorise the training passengers:
+  </p>
+
+  <div class="cell">
+    <textarea>
+from sklearn.ensemble import RandomForestClassifier
+
+forest = RandomForestClassifier(n_estimators=100, max_depth=4, random_state=42)
+forest.fit(X_train, y_train)
+print(f"Forest train accuracy: {forest.score(X_train, y_train):.2f}")
+print(f"Forest test accuracy:  {forest.score(X_test, y_test):.2f}")</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+
+  <!-- =============================================================
+       STEP 5: EVALUATE
+       ============================================================= -->
+  <h2>🔍 Step 5: evaluate honestly</h2>
+  <p>
+    Both models beat the baseline, but not by a lot on this test set. Before drawing
+    conclusions, let's look deeper (Day 20). "Positive" here means "survived":
+  </p>
+
+  <div class="cell">
+    <textarea>
+from sklearn.metrics import confusion_matrix, precision_score, recall_score
+
+for name, model in [("logistic", logreg), ("forest", forest)]:
+    pred = model.predict(X_test)
+    tn, fp, fn, tp = confusion_matrix(y_test, pred).ravel()
+    p = precision_score(y_test, pred)
+    r = recall_score(y_test, pred)
+    print(f"{name}: TN={tn} FP={fp} FN={fn} TP={tp} precision={p:.2f} recall={r:.2f}")</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    Neither model is a great survivor-finder: recall shows they catch only about half of the
+    survivors, and about half of their "survived" guesses are right (precision). Also, a
+    test set of 100 passengers is small, so one lucky or unlucky split changes the score a
+    lot. Cross-validation (Day 20) gives a steadier comparison of all three:
+  </p>
+
+  <div class="cell">
+    <textarea>
+from sklearn.model_selection import cross_val_score
+import matplotlib.pyplot as plt
+
+candidates = {"baseline": baseline, "logistic": logreg, "forest": forest}
+cv_means = {}
+for name, model in candidates.items():
+    cv_means[name] = cross_val_score(model, X, y, cv=5).mean()
+    print(f"{name:9} mean accuracy over 5 folds: {cv_means[name]:.3f}")
+
+plt.figure(figsize=(5, 3.2))
+colors = ["gray", "steelblue", "seagreen"]
+plt.bar(list(cv_means.keys()), list(cv_means.values()), color=colors)
+plt.ylim(0.5, 0.8)
+plt.ylabel("cross-validated accuracy")
+plt.title("Both models beat the baseline")
+plt.show()</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <h3>🎲 Why isn't it 95%?</h3>
+  <p>
+    Look again at the generator: survival was decided by
+    <code>rng.random(n) &lt; chance</code>, a dice roll. A woman in 1st class had a high
+    chance, not a certain one. No model can predict dice. Because we made the data, we can
+    calculate the <strong>best possible</strong> accuracy: always guess the more likely
+    outcome for each passenger, using the true <code>chance</code> values from Step 1:
+  </p>
+
+  <div class="cell">
+    <textarea>
+true_chance = chance.clip(0, 0.95)          # the real chances from our generator
+best_possible = np.maximum(true_chance, 1 - true_chance).mean()
+print(f"Best possible accuracy, even knowing the true chances: {best_possible:.2f}")</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    So about 0.74 is the ceiling, and our models reach around 0.7 in cross-validation: close to
+    perfect <em>for this problem</em>. Real data is like this too: there is always some
+    randomness no model can explain. A "low" score isn't always a bad model.
+  </p>
+  <p>Which features did the forest rely on?</p>
+
+  <div class="cell">
+    <textarea>
+importance = pd.Series(forest.feature_importances_, index=X.columns).sort_values()
+
+plt.figure(figsize=(5.5, 3.2))
+plt.barh(importance.index, importance.values, color="seagreen")
+plt.xlabel("importance")
+plt.title("What the forest used most")
+plt.show()</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    <code>sex</code> comes first, as in our generator. <code>fare</code> ranks high too: it is
+    strongly linked to class (1st class tickets cost more), so the two share the credit.
+    Remember from Day 19: importance shows what the model <em>used</em>, not what causes survival.
+  </p>
+
+
+  <!-- =============================================================
+       STEP 6: PREDICT
+       ============================================================= -->
+  <h2>🔮 Step 6: predict for new passengers</h2>
+  <p>
+    Three new <strong>made-up</strong> passengers want to know their chances. A tempting
+    first try: put their details in a table, the way a person would write them:
+  </p>
+
+  <div class="cell error-demo">
+    <textarea>
+new_passengers = pd.DataFrame({
+    "pclass": [1, 3, 2],
+    "sex": ["female", "male", "male"],
+    "age": [8, 30, 40],
+    "fare": [90.0, 8.0, 20.0],
+    "embarked": ["C", "S", "Q"],
+})
+logreg.predict_proba(new_passengers)</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    The model complains that the columns don't match: it was trained on
+    <code>embarked_C</code>, <code>embarked_Q</code>, <code>embarked_S</code> and numbers for
+    <code>sex</code>. <strong>New data must go through exactly the same preparation as the
+    training data.</strong> Let's write the steps once, as a function:
+  </p>
+
+  <div class="cell">
+    <textarea>
+def prepare(table):
+    """Turn raw passenger rows into the same columns the models were trained on."""
+    table = table.copy()
+    table["sex"] = table["sex"].map({"male": 0, "female": 1})
+    table = pd.get_dummies(table, columns=["embarked"], dtype=int)
+    return table.reindex(columns=X.columns, fill_value=0)
+
+ready = prepare(new_passengers)
+print(ready)
+
+ready["logistic"] = logreg.predict_proba(ready[X.columns])[:, 1].round(2)
+ready["forest"] = forest.predict_proba(ready[X.columns])[:, 1].round(2)
+ready[["pclass", "sex", "age", "logistic", "forest"]]</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    <code>reindex(columns=X.columns, fill_value=0)</code> puts the columns in the training
+    order and adds any that are missing (with only 3 passengers, maybe nobody boarded at
+    one port) filled with 0. The 8-year-old girl in 1st class gets a high chance; the
+    30-year-old man in 3rd class a low one, just as our made-up rules said.
+  </p>
+
+
+  <!-- =============================================================
+       LIMITATIONS
+       ============================================================= -->
+  <h2>⚖️ Limits and fairness</h2>
+  <ul>
+    <li><strong>Made-up data:</strong> these predictions describe our invented ship, not real people or real ships.</li>
+    <li><strong>Small data:</strong> 400 passengers is tiny. Scores move a lot between splits; cross-validation helps.</li>
+    <li><strong>Luck:</strong> some outcomes are random. The model gives a <em>probability</em>, not a promise.</li>
+    <li>
+      <strong>Fairness:</strong> the model leans heavily on sex and class. That describes who was
+      helped in the (made-up) past; it is not a rule for how people <em>should</em> be treated.
+      When models are used for real decisions (loans, jobs, medicine), using features like sex,
+      or features linked to wealth, can repeat old unfairness. Always ask who could be harmed
+      by a model's mistakes.
+    </li>
+  </ul>
+
+
+  <!-- =============================================================
+       COMMON MISTAKES + RECAP
+       ============================================================= -->
+  <h2>⚠️ Common mistakes</h2>
+  <ul>
+    <li>Leaving missing values or text columns in <code>X</code>. Clean and encode first.</li>
+    <li>Encoding categories like ports as 0, 1, 2. Use one-hot columns (<code>pd.get_dummies</code>) instead.</li>
+    <li>Keeping ID columns or the label itself in <code>X</code>.</li>
+    <li>Skipping the baseline: 60% accuracy sounds fine until you see that "always no" gets 59%.</li>
+    <li>Preparing new data differently from training data → column errors or silent wrong answers.</li>
+    <li>Trusting one small test set. Confirm with cross-validation.</li>
+  </ul>
+
+  <h2>✅ Recap: the full recipe</h2>
+  <ol>
+    <li><strong>Clean:</strong> <code>drop_duplicates()</code>, <code>fillna(median)</code>.</li>
+    <li><strong>Features:</strong> <code>.map({...})</code> for two values, <code>pd.get_dummies</code> for categories; drop IDs.</li>
+    <li><strong>Split:</strong> <code>train_test_split(..., stratify=y, random_state=42)</code>.</li>
+    <li><strong>Baseline:</strong> <code>DummyClassifier(strategy="most_frequent")</code>.</li>
+    <li><strong>Models:</strong> scaled logistic regression, random forest with limited depth.</li>
+    <li><strong>Evaluate:</strong> confusion matrix, precision, recall, <code>cross_val_score</code>.</li>
+    <li><strong>Predict:</strong> prepare new rows the same way, then <code>predict_proba</code>.</li>
+  </ol>
+
+
+  <!-- =============================================================
+       EXERCISES
+       Each exercise has: a task, a starting code box, hints,
+       hidden tests (<script class="tests">) and a solution
+       (<script class="solution">). The tests are Python "assert" lines
+       and can look at the variables the answer created.
+       ============================================================= -->
+  <h2>🏋️ Exercises</h2>
+  <p class="screen-only">
+    Write your answer in the box and click <strong>✓ Check my answer</strong>. Stuck? Use the
+    hints. After 3 tries you can see a solution. Each starting box begins with the same
+    passenger generator as Step 1 (scroll down to the end of the box to find your task).
+  </p>
+  <p class="print-only">
+    Write your answer in the space under each exercise. Try it on the computer too, by opening
+    this day's <code>index.html</code>. Each starting box begins with the passenger generator
+    from Step 1; your task is at the end of the box. Solutions are in the answer key at the end.
+  </p>
+
+  <div class="score">
+    <div class="bar"><div id="score-bar"></div></div>
+    <span id="score-text" class="muted small">0 / 5 done</span>
+  </div>
+
+
+  <!-- Exercise 1 -->
+  <section class="exercise" id="prepare-features">
+    <h3>1. Prepare the features</h3>
+    <p>Starting from the raw <code>ships</code> table:</p>
+    <ol>
+      <li>remove the duplicated rows and fill the missing ages with the median age</li>
+      <li>turn <code>sex</code> into numbers: <code>male → 0</code>, <code>female → 1</code></li>
+      <li>one-hot encode <code>embarked</code> with <code>pd.get_dummies(..., dtype=int)</code></li>
+      <li>store the features in <code>X</code> (without <code>passenger_id</code> and <code>survived</code>) and the label in <code>y</code></li>
+    </ol>
+    <textarea>
+import numpy as np
+import pandas as pd
+
+# --- The Northern Star data (made up), same as in the lesson ---
+rng = np.random.default_rng(42)
+n = 400
+pclass = rng.choice([1, 2, 3], size=n, p=[0.25, 0.25, 0.5])
+sex = rng.choice(["female", "male"], size=n, p=[0.4, 0.6])
+age = np.round(rng.normal(30, 13, size=n).clip(1, 75))
+fare = np.where(pclass == 1, rng.normal(85, 25, n),
+       np.where(pclass == 2, rng.normal(25, 8, n), rng.normal(10, 4, n)))
+fare = np.round(fare.clip(4, None), 2)
+embarked = rng.choice(["S", "C", "Q"], size=n, p=[0.7, 0.2, 0.1])
+chance = 0.12 + 0.45 * (sex == "female") + 0.2 * (pclass == 1) + 0.08 * (pclass == 2) + 0.15 * (age &lt; 12)
+survived = (rng.random(n) &lt; chance.clip(0, 0.95)).astype(int)
+ships = pd.DataFrame({"passenger_id": np.arange(1, n + 1), "pclass": pclass,
+                      "sex": sex, "age": age, "fare": fare,
+                      "embarked": embarked, "survived": survived})
+missing = rng.choice(n, size=30, replace=False)
+ships.loc[missing, "age"] = np.nan
+ships = pd.concat([ships, ships.iloc[[5, 17, 42]]], ignore_index=True)
+# --- End of the data ---
+
+# 1. Clean  2. sex to numbers  3. one-hot embarked  4. X and y
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden><code>ships = ships.drop_duplicates()</code> and <code>ships["age"] = ships["age"].fillna(ships["age"].median())</code></li>
+      <li hidden><code>ships["sex"] = ships["sex"].map({"male": 0, "female": 1})</code>, then <code>data = pd.get_dummies(ships, columns=["embarked"], dtype=int)</code></li>
+      <li hidden><code>X = data.drop(columns=["passenger_id", "survived"])</code> and <code>y = data["survived"]</code></li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+assert "X" in globals(), "Create a variable called X with the features."
+assert "y" in globals(), "Create a variable called y with the survived column."
+assert len(X) == 400, f"X should have 400 rows after removing the 3 duplicates, but it has {len(X)}."
+assert len(y) == len(X), "X and y should have the same number of rows."
+assert "passenger_id" not in X.columns, "Drop passenger_id from X: an ID can't explain survival."
+assert "survived" not in X.columns, "Drop survived from X: it's the answer, so it belongs in y."
+assert "embarked" not in X.columns, "Replace embarked with one-hot columns using pd.get_dummies(..., columns=[\"embarked\"])."
+assert "get_dummies" in __code__, "Use pd.get_dummies for the embarked column."
+assert set(X.columns) == {"pclass", "sex", "age", "fare", "embarked_C", "embarked_Q", "embarked_S"}, f"X should have the columns pclass, sex, age, fare, embarked_C, embarked_Q, embarked_S. Yours: {list(X.columns)}"
+assert X.isna().sum().sum() == 0, "X still has missing values. Fill the missing ages with the median."
+assert set(X["sex"].unique()) == {0, 1}, "sex should only contain the numbers 0 and 1."
+assert y[X["sex"] == 1].mean() > y[X["sex"] == 0].mean(), "Check the sex mapping: male should be 0 and female should be 1."
+assert set(y.unique()) == {0, 1}, "y should be the survived column (0 or 1)."
+assert "median" in __code__, "Fill the missing ages with the median: ships[\"age\"].median()."
+assert X["embarked_S"].isin([0, 1]).all(), "The one-hot columns should hold 0 and 1: add dtype=int to pd.get_dummies."
+</script>
+<script type="text/python" class="solution">
+import numpy as np
+import pandas as pd
+
+# --- The Northern Star data (made up), same as in the lesson ---
+rng = np.random.default_rng(42)
+n = 400
+pclass = rng.choice([1, 2, 3], size=n, p=[0.25, 0.25, 0.5])
+sex = rng.choice(["female", "male"], size=n, p=[0.4, 0.6])
+age = np.round(rng.normal(30, 13, size=n).clip(1, 75))
+fare = np.where(pclass == 1, rng.normal(85, 25, n),
+       np.where(pclass == 2, rng.normal(25, 8, n), rng.normal(10, 4, n)))
+fare = np.round(fare.clip(4, None), 2)
+embarked = rng.choice(["S", "C", "Q"], size=n, p=[0.7, 0.2, 0.1])
+chance = 0.12 + 0.45 * (sex == "female") + 0.2 * (pclass == 1) + 0.08 * (pclass == 2) + 0.15 * (age < 12)
+survived = (rng.random(n) < chance.clip(0, 0.95)).astype(int)
+ships = pd.DataFrame({"passenger_id": np.arange(1, n + 1), "pclass": pclass,
+                      "sex": sex, "age": age, "fare": fare,
+                      "embarked": embarked, "survived": survived})
+missing = rng.choice(n, size=30, replace=False)
+ships.loc[missing, "age"] = np.nan
+ships = pd.concat([ships, ships.iloc[[5, 17, 42]]], ignore_index=True)
+# --- End of the data ---
+
+ships = ships.drop_duplicates()
+ships["age"] = ships["age"].fillna(ships["age"].median())
+ships["sex"] = ships["sex"].map({"male": 0, "female": 1})
+data = pd.get_dummies(ships, columns=["embarked"], dtype=int)
+
+X = data.drop(columns=["passenger_id", "survived"])
+y = data["survived"]
+print(X.shape, list(X.columns))
+</script>
+  </section>
+
+
+  <!-- Exercise 2 -->
+  <section class="exercise" id="split">
+    <h3>2. A fair split</h3>
+    <p>
+      The starting code prepares <code>X</code> and <code>y</code>. Split them into
+      <code>X_train</code>, <code>X_test</code>, <code>y_train</code>, <code>y_test</code> with
+      <strong>25%</strong> for testing, <code>random_state=42</code>, and the same survival
+      rate in both parts.
+    </p>
+    <textarea>
+import numpy as np
+import pandas as pd
+
+# --- The Northern Star data (made up), same as in the lesson ---
+rng = np.random.default_rng(42)
+n = 400
+pclass = rng.choice([1, 2, 3], size=n, p=[0.25, 0.25, 0.5])
+sex = rng.choice(["female", "male"], size=n, p=[0.4, 0.6])
+age = np.round(rng.normal(30, 13, size=n).clip(1, 75))
+fare = np.where(pclass == 1, rng.normal(85, 25, n),
+       np.where(pclass == 2, rng.normal(25, 8, n), rng.normal(10, 4, n)))
+fare = np.round(fare.clip(4, None), 2)
+embarked = rng.choice(["S", "C", "Q"], size=n, p=[0.7, 0.2, 0.1])
+chance = 0.12 + 0.45 * (sex == "female") + 0.2 * (pclass == 1) + 0.08 * (pclass == 2) + 0.15 * (age &lt; 12)
+survived = (rng.random(n) &lt; chance.clip(0, 0.95)).astype(int)
+ships = pd.DataFrame({"passenger_id": np.arange(1, n + 1), "pclass": pclass,
+                      "sex": sex, "age": age, "fare": fare,
+                      "embarked": embarked, "survived": survived})
+missing = rng.choice(n, size=30, replace=False)
+ships.loc[missing, "age"] = np.nan
+ships = pd.concat([ships, ships.iloc[[5, 17, 42]]], ignore_index=True)
+# --- End of the data ---
+
+# Preparation (the same steps as exercise 1)
+ships = ships.drop_duplicates()
+ships["age"] = ships["age"].fillna(ships["age"].median())
+ships["sex"] = ships["sex"].map({"male": 0, "female": 1})
+data = pd.get_dummies(ships, columns=["embarked"], dtype=int)
+X = data.drop(columns=["passenger_id", "survived"])
+y = data["survived"]
+from sklearn.model_selection import train_test_split
+
+# Split into X_train, X_test, y_train, y_test
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden><code>train_test_split(X, y, ...)</code> gives back four things: <code>X_train, X_test, y_train, y_test</code>.</li>
+      <li hidden>25% for testing is <code>test_size=0.25</code>.</li>
+      <li hidden>"The same survival rate in both parts" is what <code>stratify=y</code> does.</li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+from sklearn.model_selection import train_test_split as _split
+for _name in ["X_train", "X_test", "y_train", "y_test"]:
+    assert _name in globals(), f"Create a variable called {_name}."
+assert len(X_test) == 100 and len(y_test) == 100, f"The test part should hold 25% of 400 = 100 rows, but it has {len(X_test)}."
+assert len(X_train) == 300, f"The train part should hold 300 rows, but it has {len(X_train)}."
+assert "stratify" in __code__, "Add stratify=y so both parts have the same survival rate."
+_a, _b, _c, _d = _split(X, y, test_size=0.25, random_state=42, stratify=y)
+assert list(X_test.index) == list(_b.index), "Your test rows differ from the expected ones. Use test_size=0.25, random_state=42 and stratify=y."
+assert list(y_test.index) == list(X_test.index), "Keep the order: X_train, X_test, y_train, y_test = train_test_split(X, y, ...)."
+</script>
+<script type="text/python" class="solution">
+import numpy as np
+import pandas as pd
+
+# --- The Northern Star data (made up), same as in the lesson ---
+rng = np.random.default_rng(42)
+n = 400
+pclass = rng.choice([1, 2, 3], size=n, p=[0.25, 0.25, 0.5])
+sex = rng.choice(["female", "male"], size=n, p=[0.4, 0.6])
+age = np.round(rng.normal(30, 13, size=n).clip(1, 75))
+fare = np.where(pclass == 1, rng.normal(85, 25, n),
+       np.where(pclass == 2, rng.normal(25, 8, n), rng.normal(10, 4, n)))
+fare = np.round(fare.clip(4, None), 2)
+embarked = rng.choice(["S", "C", "Q"], size=n, p=[0.7, 0.2, 0.1])
+chance = 0.12 + 0.45 * (sex == "female") + 0.2 * (pclass == 1) + 0.08 * (pclass == 2) + 0.15 * (age < 12)
+survived = (rng.random(n) < chance.clip(0, 0.95)).astype(int)
+ships = pd.DataFrame({"passenger_id": np.arange(1, n + 1), "pclass": pclass,
+                      "sex": sex, "age": age, "fare": fare,
+                      "embarked": embarked, "survived": survived})
+missing = rng.choice(n, size=30, replace=False)
+ships.loc[missing, "age"] = np.nan
+ships = pd.concat([ships, ships.iloc[[5, 17, 42]]], ignore_index=True)
+# --- End of the data ---
+
+# Preparation (the same steps as exercise 1)
+ships = ships.drop_duplicates()
+ships["age"] = ships["age"].fillna(ships["age"].median())
+ships["sex"] = ships["sex"].map({"male": 0, "female": 1})
+data = pd.get_dummies(ships, columns=["embarked"], dtype=int)
+X = data.drop(columns=["passenger_id", "survived"])
+y = data["survived"]
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.25, random_state=42, stratify=y)
+print(len(X_train), len(X_test), round(y_train.mean(), 2), round(y_test.mean(), 2))
+</script>
+  </section>
+
+
+  <!-- Exercise 3 -->
+  <section class="exercise" id="train-logistic">
+    <h3>3. Beat the baseline</h3>
+    <p>Using the split from the starting code:</p>
+    <ul>
+      <li>store the test accuracy of <code>DummyClassifier(strategy="most_frequent")</code> in <code>baseline_acc</code></li>
+      <li>train a pipeline <code>model</code> of <code>StandardScaler()</code> and <code>LogisticRegression(max_iter=1000)</code></li>
+      <li>store its test accuracy in <code>model_acc</code>. It must be higher than <code>baseline_acc</code>.</li>
+    </ul>
+    <textarea>
+import numpy as np
+import pandas as pd
+
+# --- The Northern Star data (made up), same as in the lesson ---
+rng = np.random.default_rng(42)
+n = 400
+pclass = rng.choice([1, 2, 3], size=n, p=[0.25, 0.25, 0.5])
+sex = rng.choice(["female", "male"], size=n, p=[0.4, 0.6])
+age = np.round(rng.normal(30, 13, size=n).clip(1, 75))
+fare = np.where(pclass == 1, rng.normal(85, 25, n),
+       np.where(pclass == 2, rng.normal(25, 8, n), rng.normal(10, 4, n)))
+fare = np.round(fare.clip(4, None), 2)
+embarked = rng.choice(["S", "C", "Q"], size=n, p=[0.7, 0.2, 0.1])
+chance = 0.12 + 0.45 * (sex == "female") + 0.2 * (pclass == 1) + 0.08 * (pclass == 2) + 0.15 * (age &lt; 12)
+survived = (rng.random(n) &lt; chance.clip(0, 0.95)).astype(int)
+ships = pd.DataFrame({"passenger_id": np.arange(1, n + 1), "pclass": pclass,
+                      "sex": sex, "age": age, "fare": fare,
+                      "embarked": embarked, "survived": survived})
+missing = rng.choice(n, size=30, replace=False)
+ships.loc[missing, "age"] = np.nan
+ships = pd.concat([ships, ships.iloc[[5, 17, 42]]], ignore_index=True)
+# --- End of the data ---
+
+# Preparation (the same steps as exercise 1)
+ships = ships.drop_duplicates()
+ships["age"] = ships["age"].fillna(ships["age"].median())
+ships["sex"] = ships["sex"].map({"male": 0, "female": 1})
+data = pd.get_dummies(ships, columns=["embarked"], dtype=int)
+X = data.drop(columns=["passenger_id", "survived"])
+y = data["survived"]
+from sklearn.model_selection import train_test_split
+from sklearn.dummy import DummyClassifier
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.25, random_state=42, stratify=y)
+
+# Calculate baseline_acc, then train model and calculate model_acc
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden><code>baseline = DummyClassifier(strategy="most_frequent").fit(X_train, y_train)</code>, then <code>baseline_acc = baseline.score(X_test, y_test)</code></li>
+      <li hidden><code>model = make_pipeline(StandardScaler(), LogisticRegression(max_iter=1000))</code></li>
+      <li hidden><code>model.fit(X_train, y_train)</code> and <code>model_acc = model.score(X_test, y_test)</code></li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+from sklearn.dummy import DummyClassifier as _Dummy
+assert "baseline_acc" in globals(), "Create a variable called baseline_acc."
+_base = _Dummy(strategy="most_frequent").fit(X_train, y_train).score(X_test, y_test)
+assert abs(baseline_acc - _base) < 1e-9, f"baseline_acc should be {_base:.2f}: the test accuracy of DummyClassifier(strategy=\"most_frequent\")."
+assert "model" in globals(), "Create a variable called model."
+assert hasattr(model, "predict"), "model should be a pipeline: make_pipeline(StandardScaler(), LogisticRegression(max_iter=1000))."
+assert "LogisticRegression" in __code__.split("# Calculate")[-1] and "StandardScaler" in __code__.split("# Calculate")[-1], "Build model with make_pipeline(StandardScaler(), LogisticRegression(max_iter=1000))."
+assert "model_acc" in globals(), "Create a variable called model_acc."
+assert abs(model_acc - model.score(X_test, y_test)) < 1e-9, "model_acc should be the TEST accuracy: model.score(X_test, y_test)."
+assert model_acc > baseline_acc, f"model_acc ({model_acc:.2f}) should be higher than baseline_acc ({baseline_acc:.2f}). Did you train on X_train, y_train?"
+</script>
+<script type="text/python" class="solution">
+import numpy as np
+import pandas as pd
+
+# --- The Northern Star data (made up), same as in the lesson ---
+rng = np.random.default_rng(42)
+n = 400
+pclass = rng.choice([1, 2, 3], size=n, p=[0.25, 0.25, 0.5])
+sex = rng.choice(["female", "male"], size=n, p=[0.4, 0.6])
+age = np.round(rng.normal(30, 13, size=n).clip(1, 75))
+fare = np.where(pclass == 1, rng.normal(85, 25, n),
+       np.where(pclass == 2, rng.normal(25, 8, n), rng.normal(10, 4, n)))
+fare = np.round(fare.clip(4, None), 2)
+embarked = rng.choice(["S", "C", "Q"], size=n, p=[0.7, 0.2, 0.1])
+chance = 0.12 + 0.45 * (sex == "female") + 0.2 * (pclass == 1) + 0.08 * (pclass == 2) + 0.15 * (age < 12)
+survived = (rng.random(n) < chance.clip(0, 0.95)).astype(int)
+ships = pd.DataFrame({"passenger_id": np.arange(1, n + 1), "pclass": pclass,
+                      "sex": sex, "age": age, "fare": fare,
+                      "embarked": embarked, "survived": survived})
+missing = rng.choice(n, size=30, replace=False)
+ships.loc[missing, "age"] = np.nan
+ships = pd.concat([ships, ships.iloc[[5, 17, 42]]], ignore_index=True)
+# --- End of the data ---
+
+# Preparation (the same steps as exercise 1)
+ships = ships.drop_duplicates()
+ships["age"] = ships["age"].fillna(ships["age"].median())
+ships["sex"] = ships["sex"].map({"male": 0, "female": 1})
+data = pd.get_dummies(ships, columns=["embarked"], dtype=int)
+X = data.drop(columns=["passenger_id", "survived"])
+y = data["survived"]
+from sklearn.model_selection import train_test_split
+from sklearn.dummy import DummyClassifier
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.25, random_state=42, stratify=y)
+
+baseline = DummyClassifier(strategy="most_frequent").fit(X_train, y_train)
+baseline_acc = baseline.score(X_test, y_test)
+
+model = make_pipeline(StandardScaler(), LogisticRegression(max_iter=1000))
+model.fit(X_train, y_train)
+model_acc = model.score(X_test, y_test)
+print(f"Baseline: {baseline_acc:.2f}   Logistic regression: {model_acc:.2f}")
+</script>
+  </section>
+
+
+  <!-- Exercise 4 -->
+  <section class="exercise" id="forest-importance">
+    <h3>4. What does the forest use?</h3>
+    <p>
+      Train a <code>RandomForestClassifier(n_estimators=100, max_depth=4, random_state=42)</code>
+      called <code>forest</code> on the training data. Then make a pandas Series
+      <code>importances</code> of its feature importances (column names as the index), sorted
+      from biggest to smallest, and store the names of the <strong>two</strong> most important
+      features as a list in <code>top_two</code>.
+    </p>
+    <textarea>
+import numpy as np
+import pandas as pd
+
+# --- The Northern Star data (made up), same as in the lesson ---
+rng = np.random.default_rng(42)
+n = 400
+pclass = rng.choice([1, 2, 3], size=n, p=[0.25, 0.25, 0.5])
+sex = rng.choice(["female", "male"], size=n, p=[0.4, 0.6])
+age = np.round(rng.normal(30, 13, size=n).clip(1, 75))
+fare = np.where(pclass == 1, rng.normal(85, 25, n),
+       np.where(pclass == 2, rng.normal(25, 8, n), rng.normal(10, 4, n)))
+fare = np.round(fare.clip(4, None), 2)
+embarked = rng.choice(["S", "C", "Q"], size=n, p=[0.7, 0.2, 0.1])
+chance = 0.12 + 0.45 * (sex == "female") + 0.2 * (pclass == 1) + 0.08 * (pclass == 2) + 0.15 * (age &lt; 12)
+survived = (rng.random(n) &lt; chance.clip(0, 0.95)).astype(int)
+ships = pd.DataFrame({"passenger_id": np.arange(1, n + 1), "pclass": pclass,
+                      "sex": sex, "age": age, "fare": fare,
+                      "embarked": embarked, "survived": survived})
+missing = rng.choice(n, size=30, replace=False)
+ships.loc[missing, "age"] = np.nan
+ships = pd.concat([ships, ships.iloc[[5, 17, 42]]], ignore_index=True)
+# --- End of the data ---
+
+# Preparation (the same steps as exercise 1)
+ships = ships.drop_duplicates()
+ships["age"] = ships["age"].fillna(ships["age"].median())
+ships["sex"] = ships["sex"].map({"male": 0, "female": 1})
+data = pd.get_dummies(ships, columns=["embarked"], dtype=int)
+X = data.drop(columns=["passenger_id", "survived"])
+y = data["survived"]
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.25, random_state=42, stratify=y)
+
+# Train forest, then build importances and top_two
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden>Create and train: <code>forest = RandomForestClassifier(n_estimators=100, max_depth=4, random_state=42)</code>, then <code>forest.fit(X_train, y_train)</code>.</li>
+      <li hidden><code>importances = pd.Series(forest.feature_importances_, index=X.columns).sort_values(ascending=False)</code></li>
+      <li hidden>The first two labels: <code>top_two = list(importances.index[:2])</code></li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+import pandas as _pd
+from sklearn.ensemble import RandomForestClassifier as _Forest
+assert "forest" in globals() and isinstance(forest, _Forest), "Create a RandomForestClassifier called forest."
+assert forest.n_estimators == 100 and forest.max_depth == 4 and forest.random_state == 42, "Use n_estimators=100, max_depth=4 and random_state=42."
+assert hasattr(forest, "estimators_"), "Train the forest with forest.fit(X_train, y_train)."
+assert "importances" in globals() and isinstance(importances, _pd.Series), "importances should be a pandas Series: pd.Series(..., index=X.columns)."
+assert set(importances.index) == set(X.columns), "Use the column names as the index: index=X.columns."
+assert list(importances.values) == sorted(importances.values, reverse=True), "Sort importances from biggest to smallest: .sort_values(ascending=False)."
+assert "feature_importances_" in __code__, "Build importances from forest.feature_importances_."
+assert "top_two" in globals(), "Create a variable called top_two."
+_order = _pd.Series(forest.feature_importances_, index=X.columns).sort_values(ascending=False)
+assert len(top_two) == 2, f"top_two should hold 2 names, but it holds {len(top_two)}."
+assert list(top_two) == list(_order.index[:2]), f"top_two should be {list(_order.index[:2])}, the first two labels of the sorted Series."
+assert "index[" in __code__ or "head(" in __code__ or "nlargest" in __code__, "Take top_two from the sorted Series (for example list(importances.index[:2]))."
+</script>
+<script type="text/python" class="solution">
+import numpy as np
+import pandas as pd
+
+# --- The Northern Star data (made up), same as in the lesson ---
+rng = np.random.default_rng(42)
+n = 400
+pclass = rng.choice([1, 2, 3], size=n, p=[0.25, 0.25, 0.5])
+sex = rng.choice(["female", "male"], size=n, p=[0.4, 0.6])
+age = np.round(rng.normal(30, 13, size=n).clip(1, 75))
+fare = np.where(pclass == 1, rng.normal(85, 25, n),
+       np.where(pclass == 2, rng.normal(25, 8, n), rng.normal(10, 4, n)))
+fare = np.round(fare.clip(4, None), 2)
+embarked = rng.choice(["S", "C", "Q"], size=n, p=[0.7, 0.2, 0.1])
+chance = 0.12 + 0.45 * (sex == "female") + 0.2 * (pclass == 1) + 0.08 * (pclass == 2) + 0.15 * (age < 12)
+survived = (rng.random(n) < chance.clip(0, 0.95)).astype(int)
+ships = pd.DataFrame({"passenger_id": np.arange(1, n + 1), "pclass": pclass,
+                      "sex": sex, "age": age, "fare": fare,
+                      "embarked": embarked, "survived": survived})
+missing = rng.choice(n, size=30, replace=False)
+ships.loc[missing, "age"] = np.nan
+ships = pd.concat([ships, ships.iloc[[5, 17, 42]]], ignore_index=True)
+# --- End of the data ---
+
+# Preparation (the same steps as exercise 1)
+ships = ships.drop_duplicates()
+ships["age"] = ships["age"].fillna(ships["age"].median())
+ships["sex"] = ships["sex"].map({"male": 0, "female": 1})
+data = pd.get_dummies(ships, columns=["embarked"], dtype=int)
+X = data.drop(columns=["passenger_id", "survived"])
+y = data["survived"]
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.25, random_state=42, stratify=y)
+
+forest = RandomForestClassifier(n_estimators=100, max_depth=4, random_state=42)
+forest.fit(X_train, y_train)
+importances = pd.Series(forest.feature_importances_, index=X.columns)
+importances = importances.sort_values(ascending=False)
+top_two = list(importances.index[:2])
+print(importances.round(3))
+print("Top two:", top_two)
+</script>
+  </section>
+
+
+  <!-- Exercise 5 -->
+  <section class="exercise" id="predict-passenger">
+    <h3>5. Challenge: a survival calculator</h3>
+    <p>
+      Finish the function <code>survival_chance(pclass, sex, age, fare, embarked)</code>. It
+      gets one passenger's raw details, for example <code>(1, "female", 8, 90.0, "C")</code>,
+      and must <strong>return</strong> the survival probability (a number between 0 and 1)
+      from the trained <code>model</code>.
+    </p>
+    <p class="muted small">
+      Tip: build a one-row DataFrame with exactly the 7 columns of <code>X</code>, in the same
+      order, prepared the same way as the training data.
+    </p>
+    <textarea>
+import numpy as np
+import pandas as pd
+
+# --- The Northern Star data (made up), same as in the lesson ---
+rng = np.random.default_rng(42)
+n = 400
+pclass = rng.choice([1, 2, 3], size=n, p=[0.25, 0.25, 0.5])
+sex = rng.choice(["female", "male"], size=n, p=[0.4, 0.6])
+age = np.round(rng.normal(30, 13, size=n).clip(1, 75))
+fare = np.where(pclass == 1, rng.normal(85, 25, n),
+       np.where(pclass == 2, rng.normal(25, 8, n), rng.normal(10, 4, n)))
+fare = np.round(fare.clip(4, None), 2)
+embarked = rng.choice(["S", "C", "Q"], size=n, p=[0.7, 0.2, 0.1])
+chance = 0.12 + 0.45 * (sex == "female") + 0.2 * (pclass == 1) + 0.08 * (pclass == 2) + 0.15 * (age &lt; 12)
+survived = (rng.random(n) &lt; chance.clip(0, 0.95)).astype(int)
+ships = pd.DataFrame({"passenger_id": np.arange(1, n + 1), "pclass": pclass,
+                      "sex": sex, "age": age, "fare": fare,
+                      "embarked": embarked, "survived": survived})
+missing = rng.choice(n, size=30, replace=False)
+ships.loc[missing, "age"] = np.nan
+ships = pd.concat([ships, ships.iloc[[5, 17, 42]]], ignore_index=True)
+# --- End of the data ---
+
+# Preparation (the same steps as exercise 1)
+ships = ships.drop_duplicates()
+ships["age"] = ships["age"].fillna(ships["age"].median())
+ships["sex"] = ships["sex"].map({"male": 0, "female": 1})
+data = pd.get_dummies(ships, columns=["embarked"], dtype=int)
+X = data.drop(columns=["passenger_id", "survived"])
+y = data["survived"]
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+
+model = make_pipeline(StandardScaler(), LogisticRegression(max_iter=1000))
+model.fit(X, y)
+print("Columns the model expects:", list(X.columns))
+
+def survival_chance(pclass, sex, age, fare, embarked):
+    # Build a one-row table like X, then return the probability of survival
+    return 0.5
+
+print(survival_chance(1, "female", 8, 90.0, "C"))
+print(survival_chance(3, "male", 30, 8.0, "S"))
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden>Make a dict with the 7 columns, for example <code>"sex": 1 if sex == "female" else 0</code> and <code>"embarked_C": 1 if embarked == "C" else 0</code> (the same for Q and S).</li>
+      <li hidden>Turn it into a table with one row: <code>row = pd.DataFrame([values])[list(X.columns)]</code>. The <code>[list(X.columns)]</code> part puts the columns in the right order.</li>
+      <li hidden>Return the probability of class 1: <code>return model.predict_proba(row)[0, 1]</code></li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+import pandas as _pd
+assert "survival_chance" in globals() and callable(survival_chance), "Keep the function called survival_chance."
+_cases = [(1, "female", 8, 90.0, "C"), (3, "male", 30, 8.0, "S"), (2, "male", 40, 20.0, "Q"), (3, "female", 22, 9.5, "S")]
+for _c in _cases:
+    _row = _pd.DataFrame([{"pclass": _c[0], "sex": 1 if _c[1] == "female" else 0, "age": _c[2], "fare": _c[3],
+                          "embarked_C": int(_c[4] == "C"), "embarked_Q": int(_c[4] == "Q"), "embarked_S": int(_c[4] == "S")}])
+    _expected = model.predict_proba(_row[list(X.columns)])[0, 1]
+    _got = survival_chance(*_c)
+    assert _got is not None, "survival_chance should RETURN the probability (did you print it instead?)."
+    assert 0 <= float(_got) <= 1, f"survival_chance{_c} gave {_got}. It should be one probability between 0 and 1: model.predict_proba(row)[0, 1]."
+    assert abs(float(_got) - _expected) < 1e-6, f"survival_chance{_c} should give {_expected:.3f}, but gives {float(_got):.3f}. Check the sex and embarked columns, and use predict_proba(...)[0, 1]."
+assert "predict_proba" in __code__, "Use model.predict_proba to get the probability."
+</script>
+<script type="text/python" class="solution">
+import numpy as np
+import pandas as pd
+
+# --- The Northern Star data (made up), same as in the lesson ---
+rng = np.random.default_rng(42)
+n = 400
+pclass = rng.choice([1, 2, 3], size=n, p=[0.25, 0.25, 0.5])
+sex = rng.choice(["female", "male"], size=n, p=[0.4, 0.6])
+age = np.round(rng.normal(30, 13, size=n).clip(1, 75))
+fare = np.where(pclass == 1, rng.normal(85, 25, n),
+       np.where(pclass == 2, rng.normal(25, 8, n), rng.normal(10, 4, n)))
+fare = np.round(fare.clip(4, None), 2)
+embarked = rng.choice(["S", "C", "Q"], size=n, p=[0.7, 0.2, 0.1])
+chance = 0.12 + 0.45 * (sex == "female") + 0.2 * (pclass == 1) + 0.08 * (pclass == 2) + 0.15 * (age < 12)
+survived = (rng.random(n) < chance.clip(0, 0.95)).astype(int)
+ships = pd.DataFrame({"passenger_id": np.arange(1, n + 1), "pclass": pclass,
+                      "sex": sex, "age": age, "fare": fare,
+                      "embarked": embarked, "survived": survived})
+missing = rng.choice(n, size=30, replace=False)
+ships.loc[missing, "age"] = np.nan
+ships = pd.concat([ships, ships.iloc[[5, 17, 42]]], ignore_index=True)
+# --- End of the data ---
+
+# Preparation (the same steps as exercise 1)
+ships = ships.drop_duplicates()
+ships["age"] = ships["age"].fillna(ships["age"].median())
+ships["sex"] = ships["sex"].map({"male": 0, "female": 1})
+data = pd.get_dummies(ships, columns=["embarked"], dtype=int)
+X = data.drop(columns=["passenger_id", "survived"])
+y = data["survived"]
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+
+model = make_pipeline(StandardScaler(), LogisticRegression(max_iter=1000))
+model.fit(X, y)
+print("Columns the model expects:", list(X.columns))
+
+def survival_chance(pclass, sex, age, fare, embarked):
+    values = {
+        "pclass": pclass,
+        "sex": 1 if sex == "female" else 0,
+        "age": age,
+        "fare": fare,
+        "embarked_C": 1 if embarked == "C" else 0,
+        "embarked_Q": 1 if embarked == "Q" else 0,
+        "embarked_S": 1 if embarked == "S" else 0,
+    }
+    row = pd.DataFrame([values])[list(X.columns)]
+    return model.predict_proba(row)[0, 1]
+
+print(survival_chance(1, "female", 8, 90.0, "C"))
+print(survival_chance(3, "male", 30, 8.0, "S"))
+</script>
+  </section>
+
+
+  <!-- Shown when all exercises are done -->
+  <section id="finished" class="finished" hidden>
+    <h2>🏆 Day 22 complete!</h2>
+    <p>You built a complete machine learning project, from messy table to honest predictions. The Machine Learning phase is done!</p>
+  </section>
+
+
+  <!-- =============================================================
+       TOMORROW
+       ============================================================= -->
+  <h2>🔜 Tomorrow</h2>
+  <p>
+    <strong>Deep learning begins: a neuron from scratch.</strong> You've used ready-made models
+    from scikit-learn. Tomorrow you'll build the smallest piece of a neural network yourself
+    with NumPy: inputs times weights plus a bias, an activation function, and a neuron that
+    learns the AND and OR rules on its own.
+  </p>
+
+
+  <footer class="screen-only">
+    <p>
+      Your answers are saved in this browser only. Python downloads the first time you open
+      the page, so you need an internet connection.
+    </p>
+    <button id="erase-progress" class="quiet">Erase my answers for this day</button>
+  </footer>
+
+</main>
+
+<!-- Shows whether Python is loading or ready -->
+<div id="python-status" role="status"></div>
+
+<script src="script.js"></script>
+</body>
+</html>

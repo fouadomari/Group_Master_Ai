@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Day 9: NumPy: fast math on arrays · PyPath</title>
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Python for the browser (Pyodide). Downloaded the first time, then cached. -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v314.0.7/full/pyodide.js"></script>
+</head>
+
+<body data-day="day09">
+<main>
+
+  <!-- =============================================================
+       HEADER
+       ============================================================= -->
+  <header class="lesson-header">
+    <p class="muted small">Data Science · Day 9 of 30 · about 60 minutes</p>
+    <h1>NumPy: fast math on arrays</h1>
+    <div class="tools">
+      <button id="reset-variables" class="quiet" title="Forget all variables created by this page's code boxes">↺ Forget variables</button>
+    </div>
+  </header>
+
+
+  <!-- =============================================================
+       TODAY'S GOAL
+       ============================================================= -->
+  <h2>🎯 Today's goal</h2>
+  <p>By the end of this hour you will:</p>
+  <ul>
+    <li>turn a list of numbers into a NumPy <strong>array</strong></li>
+    <li>do maths on <strong>every number at once</strong>, without a loop</li>
+    <li>pick out values with a <strong>mask</strong>, like "only the days over 10 000 steps"</li>
+    <li>work with a <strong>2D array</strong> (a table) and average its rows or columns</li>
+    <li>make reproducible random numbers</li>
+  </ul>
+
+
+  <!-- =============================================================
+       WHY THIS MATTERS
+       ============================================================= -->
+  <h2>🤔 Why this matters</h2>
+  <p>
+    Welcome to the <strong>Data Science</strong> phase! Yesterday you added up expenses one by one with a
+    loop. That's fine for ten numbers, but real data has thousands or millions of them.
+  </p>
+  <p>
+    <strong>NumPy</strong> (short for "Numerical Python") is a module that stores numbers in an
+    <strong>array</strong>: a grid of numbers that all have the same type. Think of the difference between
+    a cashier scanning items one at a time (a loop) and a machine that weighs the whole trolley at once
+    (an array). NumPy does the whole-trolley maths, and it's very fast.
+  </p>
+  <p>
+    Almost every data science tool is built on NumPy: pandas tables (tomorrow!), charts, and machine
+    learning models all keep their numbers in NumPy arrays.
+  </p>
+  <p class="note screen-only">
+    <strong>Remember:</strong> the code boxes on this page share their variables, like pages of
+    one notebook. Run them <strong>from top to bottom</strong>. The first box downloads NumPy, so it
+    may take a few seconds.
+  </p>
+
+
+  <!-- =============================================================
+       FIRST ARRAY
+       ============================================================= -->
+  <h2>🔢 Your first array</h2>
+  <p>
+    Everyone imports NumPy with the nickname <code>np</code> (remember <code>import ... as ...</code>
+    from Day 7). <code>np.array()</code> turns a list into an array. Look what <code>* 2</code> does
+    to each of them:
+  </p>
+
+  <div class="cell">
+    <textarea>
+import numpy as np
+
+# Made-up daily step counts for one week
+steps_list = [8200, 10450, 6300, 12100, 9800, 4300, 11250]
+steps = np.array(steps_list)
+
+print(steps_list * 2)     # a list: repeated, twice as long!
+print(steps * 2)          # an array: every number doubled</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    With a list you'd need a loop (<code>[s * 2 for s in steps_list]</code>). With an array the maths
+    happens on every element at once. This is called <strong>element-wise</strong> (or "vectorised") maths.
+    An array prints without commas, which is how you can tell it apart from a list.
+  </p>
+  <p>Every array knows a few things about itself:</p>
+
+  <div class="cell">
+    <textarea>
+print(type(steps))
+print("dtype:", steps.dtype)    # the type of every number inside
+print("shape:", steps.shape)    # the size: 7 numbers in one row
+print("ndim:", steps.ndim)      # number of dimensions: 1 = a simple row
+print("len:", len(steps))
+print("first:", steps[0], " last:", steps[-1], " Mon-Wed:", steps[:3])</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>Attribute</th><th>Means</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>dtype</code></td><td>"data type": <code>int</code> = whole numbers, <code>float</code> = decimals. The number after it (<code>int32</code>, <code>int64</code>, <code>float64</code>) is how much memory each number gets. In this browser whole numbers are <code>int32</code>; on most computers you'll see <code>int64</code>.</td></tr>
+      <tr><td><code>shape</code></td><td>the size, written in brackets: <code>(7,)</code> means 7 numbers; <code>(3, 4)</code> means 3 rows and 4 columns</td></tr>
+      <tr><td><code>ndim</code></td><td>number of dimensions: 1 for a row of numbers, 2 for a table</td></tr>
+    </tbody>
+  </table>
+  <p>Indexing and slicing work just like lists (Day 3).</p>
+
+  <p>NumPy can also <strong>make</strong> arrays for you:</p>
+
+  <div class="cell">
+    <textarea>
+print(np.arange(0, 10, 2))      # like range(): start, stop (not included), step
+print(np.linspace(0, 1, 5))     # 5 evenly spaced numbers from 0 to 1 (both included)
+print(np.zeros(4))              # four zeros
+print(np.ones(3))               # three ones</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+
+  <!-- =============================================================
+       ELEMENT-WISE MATH
+       ============================================================= -->
+  <h2>➗ Maths on every element</h2>
+  <p>
+    Any operator works element-wise: <code>+ - * / ** //</code>. With two arrays of the same length,
+    NumPy pairs up the numbers position by position:
+  </p>
+
+  <div class="cell">
+    <textarea>
+# Made-up café data: price and cups sold for 4 drinks
+prices = np.array([2.5, 3.0, 3.5, 1.8])
+cups = np.array([31, 45, 12, 60])
+
+revenue = prices * cups              # 2.5*31, 3.0*45, 3.5*12, 1.8*60
+print("Revenue per drink:", revenue)
+
+# np.round rounds every number in the array
+print("Steps in thousands:", np.round(steps / 1000, 1))</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+
+  <!-- =============================================================
+       MASKS
+       ============================================================= -->
+  <h2>🎭 Comparing and filtering with masks</h2>
+  <p>
+    Comparing an array with a number also works element-wise. The answer is an array of
+    <code>True</code> / <code>False</code>, one per element:
+  </p>
+
+  <div class="cell">
+    <textarea>
+goal_reached = steps >= 10000
+print(steps)
+print(goal_reached)</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    A True/False array like this is called a <strong>mask</strong>. Put it inside square brackets and
+    NumPy keeps only the elements where the mask is <code>True</code>, like holding a stencil over the data.
+    And because <code>True</code> counts as 1 and <code>False</code> as 0, <code>.sum()</code> of a mask
+    <strong>counts</strong> the True values:
+  </p>
+
+  <div class="cell">
+    <textarea>
+print("Good days:", steps[goal_reached])
+print("Number of good days:", goal_reached.sum())
+
+# The same in one line, and with two conditions (&amp; means "and"; use brackets!)
+print("Lazy days:", steps[steps &lt; 7000])
+print("Medium days:", steps[(steps >= 7000) &amp; (steps &lt; 10000)])</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p class="note">
+    <strong>With arrays, use <code>&amp;</code> instead of <code>and</code></strong> (and <code>|</code>
+    instead of <code>or</code>), and put each comparison in brackets. You'll see the same rule in pandas.
+  </p>
+
+
+  <!-- =============================================================
+       AGGREGATIONS
+       ============================================================= -->
+  <h2>📏 Summing up: aggregations</h2>
+  <p>
+    An <strong>aggregation</strong> squeezes many numbers into one: the total, the average, the biggest.
+    Arrays have them built in. <code>std</code> is the <strong>standard deviation</strong>: roughly, how far
+    the values typically are from the average (small = all similar, big = very spread out).
+    <code>argmax</code> gives the <strong>position</strong> of the biggest value, not the value itself:
+  </p>
+
+  <div class="cell">
+    <textarea>
+days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+print("Total:  ", steps.sum())
+print("Mean:   ", steps.mean().round(1))
+print("Min/Max:", steps.min(), steps.max())
+print("Std:    ", steps.std().round(1))
+
+best = steps.argmax()           # position of the biggest value
+print("Best day:", days[best], "with", steps[best], "steps")</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+
+  <!-- =============================================================
+       2D ARRAYS
+       ============================================================= -->
+  <h2>🗂️ 2D arrays: tables of numbers</h2>
+  <p>
+    A list of lists becomes a <strong>2D array</strong>: rows and columns, like a spreadsheet. Here each
+    row is a student and each column is a test:
+  </p>
+
+  <div class="cell">
+    <textarea>
+# Made-up scores: 3 students (rows) x 4 tests (columns)
+scores = np.array([
+    [72, 85, 64, 90],    # Amira
+    [55, 61, 70, 58],    # Ben
+    [88, 92, 79, 95],    # Chen
+])
+
+print(scores)
+print("shape:", scores.shape, " ndim:", scores.ndim)
+print("Ben's 3rd test:", scores[1, 2])    # [row, column], counting from 0
+print("Chen's row:", scores[2])
+print("Test 1 column:", scores[:, 0])     # ":" means "all rows"</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    Read <code>scores[1, 2]</code> as "row 1, column 2". A colon on its own means "everything", so
+    <code>scores[:, 0]</code> is "all rows, column 0": the whole first column. Slices work too:
+    <code>scores[0:2, 1:3]</code> would be rows 0–1 and columns 1–2.
+  </p>
+  <p>
+    Aggregations on a 2D array can work along an <strong>axis</strong>. <code>axis=0</code> goes
+    <strong>down</strong> the rows and gives one answer per column. <code>axis=1</code> goes
+    <strong>across</strong> the columns and gives one answer per row:
+  </p>
+
+  <div class="cell">
+    <textarea>
+print("Overall mean:", scores.mean())
+print("Mean per test:   ", scores.mean(axis=0).round(1))   # axis=0: one per column
+print("Mean per student:", scores.mean(axis=1).round(1))   # axis=1: one per row
+print("Best score of each student:", scores.max(axis=1))</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p class="note">
+    <strong>A trick to remember axes:</strong> the axis you name is the one that <em>disappears</em>.
+    <code>scores</code> has shape <code>(3, 4)</code>. <code>axis=0</code> squeezes away the 3 rows and
+    leaves 4 numbers; <code>axis=1</code> squeezes away the 4 columns and leaves 3 numbers.
+  </p>
+
+
+  <!-- =============================================================
+       BROADCASTING
+       ============================================================= -->
+  <h2>📡 Broadcasting: different shapes together</h2>
+  <p>
+    What happens with <code>scores + 5</code>? NumPy "stretches" the single number to match every
+    element. This stretching is called <strong>broadcasting</strong>. It also works with a row: a list of
+    4 numbers is added to <strong>each</strong> row of a 3 × 4 table, so every column gets its own bonus:
+  </p>
+
+  <div class="cell">
+    <textarea>
+print(scores + 5)                  # 5 bonus points everywhere
+
+bonus = np.array([0, 0, 10, 0])    # test 3 was too hard: +10 on that column only
+print(scores + bonus)
+
+# Turn each test into a percentage of its maximum possible points
+max_points = np.array([100, 100, 80, 100])
+print(np.round(scores / max_points * 100, 1))</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>Broadcasting only works when the shapes fit. Here is a mistake on purpose: 3 numbers and 2 numbers can't be paired up:</p>
+
+  <div class="cell error-demo">
+    <textarea>
+week1 = np.array([5, 7, 6])
+week2 = np.array([4, 8])
+week1 + week2</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    "operands could not be broadcast together with shapes (3,) (2,)" means: the sizes don't match.
+    When you see it, print the <code>.shape</code> of both arrays.
+  </p>
+
+
+  <!-- =============================================================
+       RANDOM NUMBERS
+       ============================================================= -->
+  <h2>🎲 Random numbers with NumPy</h2>
+  <p>
+    NumPy can make whole arrays of random numbers, which is great for creating made-up data to practise
+    on. First you make a random number <strong>generator</strong> with a seed (like
+    <code>random.seed(42)</code> on Day 7), so the "random" numbers are the same every time:
+  </p>
+
+  <div class="cell">
+    <textarea>
+rng = np.random.default_rng(42)
+
+dice = rng.integers(1, 7, size=10)       # 10 whole numbers from 1 to 6
+print("Dice:", dice)
+
+# 5 made-up heights: average 170 cm, spread 8
+heights = rng.normal(170, 8, size=5)
+print("Heights:", np.round(heights, 1))
+
+print("Share of sixes:", (dice == 6).mean())  # the mean of a mask = the share of True</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    <code>rng.normal(170, 8, ...)</code> draws numbers from the famous bell-shaped "normal" curve: most
+    values land near 170, fewer far away. And note the last trick: the <strong>mean of a mask</strong>
+    is the share (fraction) of True values. You'll use it a lot.
+  </p>
+
+
+  <!-- =============================================================
+       COMMON MISTAKES + RECAP
+       ============================================================= -->
+  <h2>⚠️ Common mistakes</h2>
+  <ul>
+    <li>Forgetting <code>import numpy as np</code> → <code>NameError: name 'np' is not defined</code>.</li>
+    <li>Using <code>and</code> / <code>or</code> with arrays: use <code>&amp;</code> / <code>|</code> and brackets around each comparison.</li>
+    <li>Mixing up the axes: <code>axis=0</code> gives one result per <strong>column</strong>, <code>axis=1</code> one per <strong>row</strong>.</li>
+    <li>Adding arrays whose shapes don't fit → "could not be broadcast". Check <code>.shape</code>.</li>
+    <li>Confusing <code>argmax()</code> (the position) with <code>max()</code> (the value).</li>
+    <li>Writing a loop when a single array operation would do.</li>
+  </ul>
+
+  <h2>✅ Recap</h2>
+  <ul>
+    <li><code>np.array(list)</code> makes an array; it has a <code>dtype</code>, <code>shape</code> and <code>ndim</code>.</li>
+    <li><code>np.arange</code>, <code>np.linspace</code>, <code>np.zeros</code>, <code>np.ones</code> create arrays.</li>
+    <li>Maths and comparisons work on every element at once.</li>
+    <li>A mask (<code>arr &gt; 5</code>) filters: <code>arr[arr &gt; 5]</code>; <code>mask.sum()</code> counts, <code>mask.mean()</code> gives the share.</li>
+    <li><code>sum</code>, <code>mean</code>, <code>min</code>, <code>max</code>, <code>std</code>, <code>argmax</code>; on 2D arrays add <code>axis=0</code> (per column) or <code>axis=1</code> (per row).</li>
+    <li>2D indexing: <code>arr[row, column]</code>; <code>arr[:, 0]</code> is the first column.</li>
+    <li>Broadcasting stretches a number or a row to fit; random numbers come from <code>np.random.default_rng(42)</code>.</li>
+  </ul>
+
+
+  <!-- =============================================================
+       EXERCISES
+       Each exercise has: a task, a starting code box, hints,
+       hidden tests (<script class="tests">) and a solution
+       (<script class="solution">). The tests are Python "assert" lines
+       and can look at the variables the answer created.
+       ============================================================= -->
+  <h2>🏋️ Exercises</h2>
+  <p class="screen-only">
+    Write your answer in the box and click <strong>✓ Check my answer</strong>. Stuck? Use the
+    hints. After 3 tries you can see a solution. Try to solve each one <strong>without a loop</strong>.
+  </p>
+  <p class="print-only">
+    Write your answer in the space under each exercise. Try it on the computer too, by opening
+    this day's <code>index.html</code>. Solutions are in the answer key at the end.
+  </p>
+
+  <div class="score">
+    <div class="bar"><div id="score-bar"></div></div>
+    <span id="score-text" class="muted small">0 / 5 done</span>
+  </div>
+
+
+  <!-- Exercise 1 -->
+  <section class="exercise" id="to-fahrenheit">
+    <h3>1. Celsius to Fahrenheit</h3>
+    <p>
+      Convert all the made-up temperatures at once (no loop!) into a new array called
+      <code>fahrenheit</code>. The formula is: °F = °C × 9 / 5 + 32.
+    </p>
+    <textarea>
+import numpy as np
+
+celsius = np.array([18.5, 22.0, 30.5, 15.0, 27.5])
+
+# Create fahrenheit
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden>Do the maths on the whole array, exactly like on one number.</li>
+      <li hidden><code>fahrenheit = celsius * 9 / 5 + 32</code></li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+import numpy as np
+assert "fahrenheit" in globals(), "Create a variable called fahrenheit."
+assert "for " not in __code__, "Try it without a loop: do the maths on the whole array."
+_f = np.asarray(fahrenheit)
+assert _f.shape == celsius.shape, f"fahrenheit should have {len(celsius)} numbers, one per temperature."
+assert np.allclose(_f, celsius * 9 / 5 + 32), f"Some values are wrong: got {_f}. The formula is celsius * 9 / 5 + 32."
+</script>
+<script type="text/python" class="solution">
+import numpy as np
+
+celsius = np.array([18.5, 22.0, 30.5, 15.0, 27.5])
+
+fahrenheit = celsius * 9 / 5 + 32
+</script>
+  </section>
+
+
+  <!-- Exercise 2 -->
+  <section class="exercise" id="hot-days">
+    <h3>2. Hot days</h3>
+    <p>
+      Here are two weeks of made-up afternoon temperatures. Using a mask:
+    </p>
+    <ul>
+      <li>store the temperatures <strong>above 30</strong> in an array called <code>hot_temps</code></li>
+      <li>store <strong>how many</strong> days were above 30 in a variable called <code>hot_count</code></li>
+    </ul>
+    <textarea>
+import numpy as np
+
+temps = np.array([28, 31, 33, 29, 27, 35, 30, 32, 26, 25, 31, 34, 29, 30])
+
+# Create hot_temps and hot_count
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden>The mask is <code>temps &gt; 30</code>. "Above 30" means 30 itself doesn't count.</li>
+      <li hidden><code>hot_temps = temps[temps &gt; 30]</code></li>
+      <li hidden>Count with <code>(temps &gt; 30).sum()</code> or <code>len(hot_temps)</code>.</li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+import numpy as np
+assert "hot_temps" in globals(), "Create an array called hot_temps."
+assert "hot_count" in globals(), "Create a variable called hot_count."
+_want = temps[temps > 30]
+assert np.array_equal(np.asarray(hot_temps), _want), f"hot_temps should be {_want}, but it is {hot_temps}. Did you use > 30 (not >= 30)?"
+assert hot_count == len(_want), f"hot_count should be {len(_want)}, but it is {hot_count}."
+assert "temps[" in __code__.replace(" ", ""), "Use a mask inside square brackets: temps[...]"
+</script>
+<script type="text/python" class="solution">
+import numpy as np
+
+temps = np.array([28, 31, 33, 29, 27, 35, 30, 32, 26, 25, 31, 34, 29, 30])
+
+hot_temps = temps[temps > 30]
+hot_count = (temps > 30).sum()
+</script>
+  </section>
+
+
+  <!-- Exercise 3 -->
+  <section class="exercise" id="weekly-stats">
+    <h3>3. Weekly step stats</h3>
+    <p>For this made-up week of step counts, create:</p>
+    <ul>
+      <li><code>mean_steps</code>: the average number of steps</li>
+      <li><code>max_steps</code>: the most steps in one day</li>
+      <li><code>best_day</code>: the <strong>name</strong> of the day with the most steps (use <code>argmax</code> and the <code>days</code> list)</li>
+    </ul>
+    <textarea>
+import numpy as np
+
+days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+steps = np.array([7400, 9100, 11800, 6200, 8800, 13400, 5100])
+
+# Create mean_steps, max_steps and best_day
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden><code>steps.mean()</code> and <code>steps.max()</code></li>
+      <li hidden><code>steps.argmax()</code> gives a position, like <code>5</code>. Use it as an index into <code>days</code>.</li>
+      <li hidden><code>best_day = days[steps.argmax()]</code></li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+for _v in ["mean_steps", "max_steps", "best_day"]:
+    assert _v in globals(), f"Create a variable called {_v}."
+assert abs(mean_steps - steps.mean()) < 0.01, f"mean_steps should be {steps.mean():.2f}, but it is {mean_steps}."
+assert max_steps == steps.max(), f"max_steps should be {steps.max()}, but it is {max_steps}."
+assert best_day == days[steps.argmax()], f"best_day should be {days[steps.argmax()]!r}, but it is {best_day!r}. Use the position from argmax() as an index into days."
+assert "argmax" in __code__, "Find the best day with argmax()."
+</script>
+<script type="text/python" class="solution">
+import numpy as np
+
+days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+steps = np.array([7400, 9100, 11800, 6200, 8800, 13400, 5100])
+
+mean_steps = steps.mean()
+max_steps = steps.max()
+best_day = days[steps.argmax()]
+</script>
+  </section>
+
+
+  <!-- Exercise 4 -->
+  <section class="exercise" id="student-averages">
+    <h3>4. Averages per student and per test</h3>
+    <p>The made-up table has one row per student and one column per test. Create:</p>
+    <ul>
+      <li><code>student_avg</code>: the average of <strong>each student</strong> (one number per row)</li>
+      <li><code>test_avg</code>: the average of <strong>each test</strong> (one number per column)</li>
+    </ul>
+    <textarea>
+import numpy as np
+
+scores = np.array([
+    [65, 70, 80],
+    [90, 85, 95],
+    [50, 62, 58],
+    [77, 81, 73],
+])
+
+# Create student_avg and test_avg
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden>One number per row means going <strong>across</strong> the columns: <code>axis=1</code>.</li>
+      <li hidden><code>student_avg = scores.mean(axis=1)</code></li>
+      <li hidden><code>test_avg = scores.mean(axis=0)</code></li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+import numpy as np
+assert "student_avg" in globals(), "Create a variable called student_avg."
+assert "test_avg" in globals(), "Create a variable called test_avg."
+_s = np.asarray(student_avg)
+_t = np.asarray(test_avg)
+assert _s.shape == (scores.shape[0],), f"student_avg should have {scores.shape[0]} numbers (one per student), but its shape is {_s.shape}. Which axis did you use?"
+assert np.allclose(_s, scores.mean(axis=1)), f"student_avg has the wrong values: {_s}."
+assert _t.shape == (scores.shape[1],), f"test_avg should have {scores.shape[1]} numbers (one per test), but its shape is {_t.shape}. Which axis did you use?"
+assert np.allclose(_t, scores.mean(axis=0)), f"test_avg has the wrong values: {_t}."
+assert "axis" in __code__, "Use the axis= option."
+</script>
+<script type="text/python" class="solution">
+import numpy as np
+
+scores = np.array([
+    [65, 70, 80],
+    [90, 85, 95],
+    [50, 62, 58],
+    [77, 81, 73],
+])
+
+student_avg = scores.mean(axis=1)
+test_avg = scores.mean(axis=0)
+</script>
+  </section>
+
+
+  <!-- Exercise 5 -->
+  <section class="exercise" id="normalise">
+    <h3>5. Challenge: scale every column from 0 to 1</h3>
+    <p>
+      The made-up table holds people's height (cm) and weight (kg). The two columns use very different
+      numbers, which confuses many machine learning models. <strong>Min-max scaling</strong> fixes this:
+      in each column, the smallest value becomes 0, the biggest becomes 1, and the rest fall in between:
+    </p>
+    <p><code>scaled = (value − column minimum) / (column maximum − column minimum)</code></p>
+    <p>Create <code>scaled</code> for the whole table at once, using <code>axis=0</code> and broadcasting.</p>
+    <textarea>
+import numpy as np
+
+people = np.array([
+    [160, 55],
+    [175, 72],
+    [182, 90],
+    [168, 61],
+    [190, 85],
+])
+
+# Create scaled
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden><code>people.min(axis=0)</code> gives the minimum of each column: <code>[160 55]</code>.</li>
+      <li hidden>Store <code>low = people.min(axis=0)</code> and <code>high = people.max(axis=0)</code>. Broadcasting subtracts them from every row.</li>
+      <li hidden><code>scaled = (people - low) / (high - low)</code></li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+import numpy as np
+assert "scaled" in globals(), "Create a variable called scaled."
+_s = np.asarray(scaled)
+assert _s.shape == people.shape, f"scaled should have the same shape as people {people.shape}, but it has {_s.shape}."
+assert np.allclose(_s.min(axis=0), 0) and np.allclose(_s.max(axis=0), 1), f"Every column of scaled should go from 0 to 1. Its column minimums are {_s.min(axis=0)} and maximums {_s.max(axis=0)}. Did you use axis=0?"
+_want = (people - people.min(axis=0)) / (people.max(axis=0) - people.min(axis=0))
+assert np.allclose(_s, _want), f"Some values are wrong. Expected:\n{np.round(_want, 3)}"
+assert "axis=0" in __code__.replace(" ", ""), "Use axis=0 to get each column's minimum and maximum."
+assert "for " not in __code__, "Try it without a loop, using broadcasting."
+</script>
+<script type="text/python" class="solution">
+import numpy as np
+
+people = np.array([
+    [160, 55],
+    [175, 72],
+    [182, 90],
+    [168, 61],
+    [190, 85],
+])
+
+low = people.min(axis=0)
+high = people.max(axis=0)
+scaled = (people - low) / (high - low)
+</script>
+  </section>
+
+
+  <!-- Shown when all exercises are done -->
+  <section id="finished" class="finished" hidden>
+    <h2>🏆 Day 9 complete!</h2>
+    <p>Great work. You can now do maths on thousands of numbers in one line.</p>
+  </section>
+
+
+  <!-- =============================================================
+       TOMORROW
+       ============================================================= -->
+  <h2>🔜 Tomorrow</h2>
+  <p>
+    <strong>Pandas I: loading and inspecting data.</strong> NumPy arrays hold numbers, but real tables
+    also have column names, text and dates. Tomorrow you'll meet pandas, the most popular data tool in
+    Python: you'll load a made-up CSV file into a <strong>DataFrame</strong>, look at its first rows,
+    get quick statistics with one command, pick columns and add new ones.
+  </p>
+
+
+  <footer class="screen-only">
+    <p>
+      Your answers are saved in this browser only. Python downloads the first time you open
+      the page, so you need an internet connection.
+    </p>
+    <button id="erase-progress" class="quiet">Erase my answers for this day</button>
+  </footer>
+
+</main>
+
+<!-- Shows whether Python is loading or ready -->
+<div id="python-status" role="status"></div>
+
+<script src="script.js"></script>
+</body>
+</html>

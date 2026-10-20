@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Day 21: Clustering with K-means · PyPath</title>
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Python for the browser (Pyodide). Downloaded the first time, then cached. -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v314.0.7/full/pyodide.js"></script>
+</head>
+
+<body data-day="day21">
+<main>
+
+  <!-- =============================================================
+       HEADER
+       ============================================================= -->
+  <header class="lesson-header">
+    <p class="muted small">Machine Learning · Day 21 of 30 · about 60 minutes</p>
+    <h1>Clustering with K-means</h1>
+    <div class="tools">
+      <button id="reset-variables" class="quiet" title="Forget all variables created by this page's code boxes">↺ Forget variables</button>
+    </div>
+  </header>
+
+
+  <!-- =============================================================
+       TODAY'S GOAL
+       ============================================================= -->
+  <h2>🎯 Today's goal</h2>
+  <p>By the end of this hour you will:</p>
+  <ul>
+    <li>know what <strong>unsupervised learning</strong> is: learning without any right answers</li>
+    <li>understand the four steps of <strong>K-means</strong>: pick centres, assign, move, repeat</li>
+    <li>use <code>KMeans</code> and read <code>labels_</code>, <code>cluster_centers_</code> and <code>inertia_</code></li>
+    <li>choose the number of clusters with the <strong>elbow method</strong></li>
+    <li><strong>scale</strong> your data first, and describe customer segments in plain words</li>
+  </ul>
+
+
+  <!-- =============================================================
+       WHY THIS MATTERS
+       ============================================================= -->
+  <h2>🤔 Why this matters</h2>
+  <p>
+    Pour a big bag of mixed sweets on a table and ask a friend to sort them. Nobody tells
+    them the "right" groups, yet they will make piles: by colour, by size, by wrapper. They
+    put <strong>similar things together</strong>.
+  </p>
+  <p>
+    Since Day 16 every model learned from examples <em>with</em> the right answer (the label
+    <code>y</code>). That is <strong>supervised</strong> learning. Often there is no label at
+    all: a shop has thousands of customers but nobody has written "bargain hunter" or "big
+    spender" next to them. <strong>Clustering</strong> finds such groups by itself. This is
+    <strong>unsupervised</strong> learning. Shops use it for customer segments, biologists
+    to group cells, and journalists to group similar documents.
+  </p>
+  <p class="note screen-only">
+    <strong>Remember:</strong> the code boxes on this page share their variables, like pages of
+    one notebook. Run them <strong>from top to bottom</strong>.
+  </p>
+
+
+  <!-- =============================================================
+       DEMO DATA
+       ============================================================= -->
+  <h2>🫧 Data with groups in it</h2>
+  <p>
+    scikit-learn's <code>make_blobs</code> makes up points that sit in round "blobs". It is
+    perfect for seeing how clustering works. It also returns the true blob of each point, but
+    we throw that away with <code>_</code> (a name that means "I don't need this"): we pretend
+    we don't know the groups.
+  </p>
+
+  <div class="cell">
+    <textarea>
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.datasets import make_blobs
+
+# 300 made-up points with 2 features, in 3 hidden groups
+X_blobs, _ = make_blobs(n_samples=300, centers=3, cluster_std=1.0, random_state=42)
+print("Shape:", X_blobs.shape)
+
+plt.figure(figsize=(5, 4))
+plt.scatter(X_blobs[:, 0], X_blobs[:, 1], color="gray", s=15)
+plt.title("No labels: can you see the groups?")
+plt.show()</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>Your eyes find three groups at once. Now let's teach the computer to do the same.</p>
+
+
+  <!-- =============================================================
+       K-MEANS STEPS
+       ============================================================= -->
+  <h2>👣 How K-means works</h2>
+  <p>
+    <strong>K</strong> is the number of groups you ask for, and a <strong>mean</strong> is an
+    average. K-means describes every group by its <strong>centre</strong> (the average point
+    of the group) and repeats four simple steps:
+  </p>
+  <ol>
+    <li><strong>Pick</strong> K starting centres at random.</li>
+    <li><strong>Assign</strong> every point to its nearest centre.</li>
+    <li><strong>Move</strong> each centre to the average of the points assigned to it.</li>
+    <li><strong>Repeat</strong> steps 2 and 3 until the centres stop moving.</li>
+  </ol>
+  <p>
+    We can watch it happen. <code>max_iter</code> limits how many rounds of "assign + move" it
+    may do, so we stop it after 1 round, after 3 rounds, and when it is finished. The black
+    crosses are the centres:
+  </p>
+
+  <div class="cell">
+    <textarea>
+from sklearn.cluster import KMeans
+
+fig, axes = plt.subplots(1, 3, figsize=(12, 3.6))
+for ax, rounds in zip(axes, [1, 3, 10]):
+    km = KMeans(n_clusters=3, init="random", n_init=1,
+                max_iter=rounds, random_state=4)
+    km.fit(X_blobs)
+    ax.scatter(X_blobs[:, 0], X_blobs[:, 1], c=km.labels_, cmap="viridis", s=12)
+    centres = km.cluster_centers_
+    ax.scatter(centres[:, 0], centres[:, 1], color="black", marker="X", s=200)
+    ax.set_title(f"after {km.n_iter_} round(s)")
+plt.show()</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    At first, two centres share one real group and one centre must cover two groups. Round by
+    round the centres slide towards the middle of the real groups. (<code>init="random"</code>,
+    <code>n_init=1</code> and <code>max_iter</code> are only used here to show the steps. Normally you leave them out.)
+  </p>
+
+
+  <!-- =============================================================
+       KMEANS IN SKLEARN
+       ============================================================= -->
+  <h2>🤖 K-means in scikit-learn</h2>
+  <p>
+    The usual pattern, but notice: <code>fit</code> gets only <code>X</code>. There is no
+    <code>y</code>, because there are no answers. Afterwards the model holds:
+  </p>
+  <ul>
+    <li><code>labels_</code>: the cluster number of every point (0, 1, 2…)</li>
+    <li><code>cluster_centers_</code>: the coordinates of each centre</li>
+  </ul>
+
+  <div class="cell">
+    <textarea>
+kmeans = KMeans(n_clusters=3, n_init=10, random_state=42)
+kmeans.fit(X_blobs)
+
+print("First 10 labels:", kmeans.labels_[:10])
+print("Points per cluster:", np.bincount(kmeans.labels_))
+print("Centres:")
+print(kmeans.cluster_centers_.round(2))
+
+plt.figure(figsize=(5, 4))
+plt.scatter(X_blobs[:, 0], X_blobs[:, 1], c=kmeans.labels_, cmap="viridis", s=15)
+plt.scatter(kmeans.cluster_centers_[:, 0], kmeans.cluster_centers_[:, 1],
+            color="black", marker="X", s=200, label="centres")
+plt.title("K-means found 3 clusters")
+plt.legend()
+plt.show()</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p class="muted small">
+    New tool: <code>np.bincount(labels)</code> counts how many times each number 0, 1, 2… appears.
+  </p>
+  <p class="note">
+    <strong>The numbers are just names.</strong> "Cluster 0" is not better or first in any
+    way. Run with a different <code>random_state</code> and the same groups may get different
+    numbers. It's up to you, the human, to look at each cluster and give it a meaningful name.
+  </p>
+  <p>A new point simply joins the cluster with the nearest centre. <code>predict</code> does that:</p>
+
+  <div class="cell">
+    <textarea>
+new_points = [[-3, 9], [5, 2], [-7, -7]]
+kmeans.predict(new_points)</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+
+  <!-- =============================================================
+       INERTIA AND N_INIT
+       ============================================================= -->
+  <h2>📏 How tight are the clusters? Inertia</h2>
+  <p>
+    <code>inertia_</code> adds up, for every point, the <strong>squared distance</strong> to
+    its own centre. Small inertia means the points sit close to their centres: tight
+    clusters. K-means always tries to make this number as small as possible.
+  </p>
+  <p>
+    Because K-means starts from <em>random</em> centres, an unlucky start can get stuck in a
+    poor answer. Let's try 5 single starts:
+  </p>
+
+  <div class="cell">
+    <textarea>
+print(f"Our model (n_init=10): inertia = {kmeans.inertia_:.0f}")
+
+for seed in [0, 1, 2, 3, 4]:
+    one_try = KMeans(n_clusters=3, init="random", n_init=1, random_state=seed)
+    one_try.fit(X_blobs)
+    print(f"single random start {seed}: inertia = {one_try.inertia_:.0f}")</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    Some starts got stuck with a much bigger inertia (two centres shared one blob). That is why
+    we write <code>n_init=10</code>: K-means runs 10 times from different starts and keeps
+    the run with the smallest inertia. Together with <code>random_state=42</code>, the result
+    is good <em>and</em> the same every time.
+  </p>
+
+
+  <!-- =============================================================
+       ELBOW
+       ============================================================= -->
+  <h2>💪 How many clusters? The elbow method</h2>
+  <p>
+    With real data you don't know K. Could we just pick the K with the smallest inertia? No:
+    more clusters <em>always</em> means smaller inertia (with one cluster per point it would
+    be 0!). Instead we draw inertia for K = 1, 2, 3… and look for the <strong>elbow</strong>:
+    the point where adding another cluster stops helping much.
+  </p>
+
+  <div class="cell">
+    <textarea>
+ks = range(1, 9)
+inertias = []
+for k in ks:
+    model = KMeans(n_clusters=k, n_init=10, random_state=42).fit(X_blobs)
+    inertias.append(model.inertia_)
+
+print([round(value) for value in inertias])
+
+plt.figure(figsize=(5.5, 3.5))
+plt.plot(list(ks), inertias, marker="o")
+plt.xlabel("number of clusters K")
+plt.ylabel("inertia")
+plt.title("The elbow is at K = 3")
+plt.show()</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    From 1 to 2 to 3 clusters the inertia falls steeply; after 3 the line is almost flat. The
+    bend, like an elbow in an arm, says <strong>K = 3</strong>. Real data rarely has such a sharp
+    elbow, so also ask: "Can I describe and use these groups?"
+  </p>
+
+
+  <!-- =============================================================
+       CUSTOMERS AND SCALING
+       ============================================================= -->
+  <h2>🛍️ Customer segments, and why to scale first</h2>
+  <p>
+    Now a <strong>made-up</strong> shop with 120 customers. For each one we know how much
+    they spent last year (in dollars) and how many times a month they visit:
+  </p>
+
+  <div class="cell">
+    <textarea>
+rng = np.random.default_rng(42)
+n = 40     # 40 customers in each hidden group (made-up data)
+spend = np.concatenate([rng.normal(1000, 250, n),      # group A
+                        rng.normal(1000, 250, n),      # group B
+                        rng.normal(3000, 300, n)])     # group C
+visits = np.concatenate([rng.normal(2, 0.8, n),
+                         rng.normal(12, 1.5, n),
+                         rng.normal(7, 1.5, n)])
+spend = spend.round(0)
+visits = visits.clip(1).round(0)     # at least 1 visit, whole numbers
+
+customers = pd.DataFrame({
+    "customer_id": [f"C{number:03d}" for number in range(1, 3 * n + 1)],
+    "spend": spend,
+    "visits": visits,
+})
+customers.head()</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p class="muted small">
+    <code>f"C{number:03d}"</code> writes a number with 3 digits, padded with zeros: C001, C002…
+  </p>
+  <p>K-means measures distances, so it only understands numbers. Giving it the whole table, ID text included, fails:</p>
+
+  <div class="cell error-demo">
+    <textarea>
+KMeans(n_clusters=3, n_init=10, random_state=42).fit(customers)</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    "could not convert string to float: 'C001'": Python tried to turn the ID text into a
+    number. Select only the number columns: <code>customers[["spend", "visits"]]</code>.
+  </p>
+  <p>
+    There's a second, sneakier problem. Spend is in the <strong>thousands</strong>, visits are
+    below <strong>20</strong>. A difference of 10 visits (a huge change in behaviour!) counts
+    as much as a difference of 10 dollars (nothing). So K-means looks almost only at spend.
+    Compare the clusters without and with scaling. <code>StandardScaler</code> (Day 18) puts
+    both columns on the same scale: mean 0, standard deviation 1.
+  </p>
+
+  <div class="cell">
+    <textarea>
+from sklearn.preprocessing import StandardScaler
+
+features = customers[["spend", "visits"]]
+
+raw_labels = KMeans(n_clusters=3, n_init=10, random_state=42).fit_predict(features)
+
+scaled = StandardScaler().fit_transform(features)
+scaled_labels = KMeans(n_clusters=3, n_init=10, random_state=42).fit_predict(scaled)
+
+fig, axes = plt.subplots(1, 2, figsize=(10, 3.8))
+axes[0].scatter(customers["spend"], customers["visits"], c=raw_labels, s=18)
+axes[0].set_title("Without scaling: split by spend only")
+axes[1].scatter(customers["spend"], customers["visits"], c=scaled_labels, s=18)
+axes[1].set_title("With scaling: three clear segments")
+for ax in axes:
+    ax.set_xlabel("spend per year ($)")
+    ax.set_ylabel("visits per month")
+plt.show()</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p class="muted small">
+    <code>fit_predict</code> is a shortcut: fit, then give back <code>labels_</code>, in one call.
+  </p>
+  <p>
+    Without scaling, the low spenders are cut into two halves by spend, ignoring that some of
+    them visit 12 times a month and others twice. After scaling, both columns count, and the
+    three real groups appear. <strong>Rule: scale before clustering</strong> whenever columns
+    use different units.
+  </p>
+  <p>Clusters are only useful once you can <strong>describe</strong> them. Add the labels as a column and compare the groups with <code>groupby</code> (Day 11):</p>
+
+  <div class="cell">
+    <textarea>
+customers["cluster"] = scaled_labels
+
+summary = customers.groupby("cluster")[["spend", "visits"]].mean().round(1)
+summary["customers"] = customers["cluster"].value_counts().sort_index()
+summary</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    Now a human gives the segments names, for example: <em>"rare visitors"</em> (low spend,
+    about 2 visits), <em>"frequent small shoppers"</em> (low spend, about 12 visits) and
+    <em>"big spenders"</em> (high spend). The shop could send each group a different offer.
+  </p>
+
+
+  <!-- =============================================================
+       IRIS
+       ============================================================= -->
+  <h2>🌸 Does clustering find real groups?</h2>
+  <p>
+    On real data we can't check clusters, because there are no answers. But the iris flowers
+    from Day 16 <em>do</em> have answers (the species). So let's cluster them while hiding
+    the species, and only afterwards compare with <code>pd.crosstab</code> (Day 14):
+  </p>
+
+  <div class="cell">
+    <textarea>
+from sklearn.datasets import load_iris
+
+iris = load_iris(as_frame=True)
+iris_kmeans = KMeans(n_clusters=3, n_init=10, random_state=42)
+iris_kmeans.fit(iris.data)          # only X, no y!
+
+species = iris.target.map({0: "setosa", 1: "versicolor", 2: "virginica"})
+pd.crosstab(species, iris_kmeans.labels_,
+            rownames=["real species"], colnames=["cluster"])</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    Without ever seeing a species name, K-means puts all 50 setosa flowers in one cluster.
+    Versicolor and virginica look more alike, so some of them are mixed up. Clustering finds
+    groups that are <em>similar</em>, which is not always the same as the groups we care about.
+  </p>
+
+
+  <!-- =============================================================
+       COMMON MISTAKES + RECAP
+       ============================================================= -->
+  <h2>⚠️ Common mistakes</h2>
+  <ul>
+    <li>Giving K-means text columns (like IDs or names) → <code>ValueError: could not convert string to float</code>.</li>
+    <li>Forgetting to scale columns with different units. The biggest numbers win.</li>
+    <li>Thinking cluster numbers mean something. "Cluster 0" is just a name.</li>
+    <li>Choosing K by the smallest inertia. More clusters always lower it; look for the elbow.</li>
+    <li>Leaving out <code>n_init=10</code> and <code>random_state=42</code>: results can change, or get stuck in a poor answer.</li>
+    <li>Believing clusters are "the truth". They are groups of similar points; a human must check that they make sense.</li>
+  </ul>
+
+  <h2>✅ Recap</h2>
+  <ul>
+    <li>Unsupervised learning: only <code>X</code>, no <code>y</code>. Clustering puts similar points together.</li>
+    <li>K-means: pick K centres → assign each point to the nearest → move centres to the average → repeat.</li>
+    <li><code>KMeans(n_clusters=K, n_init=10, random_state=42).fit(X)</code>, then <code>labels_</code>, <code>cluster_centers_</code>, <code>inertia_</code>, <code>predict(new)</code>.</li>
+    <li>Elbow method: plot inertia for K = 1, 2, 3… and pick the bend.</li>
+    <li>Scale first (<code>StandardScaler</code>), then describe each cluster with <code>groupby(...).mean()</code>.</li>
+  </ul>
+
+
+  <!-- =============================================================
+       EXERCISES
+       Each exercise has: a task, a starting code box, hints,
+       hidden tests (<script class="tests">) and a solution
+       (<script class="solution">). The tests are Python "assert" lines
+       and can look at the variables the answer created.
+       ============================================================= -->
+  <h2>🏋️ Exercises</h2>
+  <p class="screen-only">
+    Write your answer in the box and click <strong>✓ Check my answer</strong>. Stuck? Use the
+    hints. After 3 tries you can see a solution.
+  </p>
+  <p class="print-only">
+    Write your answer in the space under each exercise. Try it on the computer too, by opening
+    this day's <code>index.html</code>. Solutions are in the answer key at the end.
+  </p>
+
+  <div class="score">
+    <div class="bar"><div id="score-bar"></div></div>
+    <span id="score-text" class="muted small">0 / 5 done</span>
+  </div>
+
+
+  <!-- Exercise 1 -->
+  <section class="exercise" id="fit-kmeans">
+    <h3>1. Fit K-means</h3>
+    <p>
+      The made-up points in <code>X</code> come in 4 blobs. Create a <code>KMeans</code> with
+      <strong>4</strong> clusters, <code>n_init=10</code> and <code>random_state=42</code> in a
+      variable called <code>kmeans</code>, fit it on <code>X</code>, and store its labels in
+      <code>labels</code>.
+    </p>
+    <textarea>
+import numpy as np
+from sklearn.datasets import make_blobs
+from sklearn.cluster import KMeans
+
+X, _ = make_blobs(n_samples=[80, 50, 40, 30], cluster_std=1.0, random_state=7)
+
+# Create and fit kmeans, then store labels
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden><code>kmeans = KMeans(n_clusters=4, n_init=10, random_state=42)</code></li>
+      <li hidden>Fit with <code>kmeans.fit(X)</code>. Only <code>X</code>: there is no <code>y</code>.</li>
+      <li hidden><code>labels = kmeans.labels_</code></li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+from sklearn.cluster import KMeans as _KMeans
+assert "kmeans" in globals(), "Create a variable called kmeans."
+assert isinstance(kmeans, _KMeans), "kmeans should be a KMeans(...) model."
+assert kmeans.n_clusters == 4, f"Ask for 4 clusters with n_clusters=4 (yours is {kmeans.n_clusters})."
+assert kmeans.random_state == 42, "Add random_state=42."
+assert hasattr(kmeans, "labels_"), "kmeans isn't fitted yet. Call kmeans.fit(X)."
+assert "labels" in globals(), "Store the labels in a variable called labels."
+assert len(labels) == len(X), f"labels should have one number per point ({len(X)}), but it has {len(labels)}."
+assert list(labels) == list(kmeans.labels_), "labels should be kmeans.labels_."
+</script>
+<script type="text/python" class="solution">
+import numpy as np
+from sklearn.datasets import make_blobs
+from sklearn.cluster import KMeans
+
+X, _ = make_blobs(n_samples=[80, 50, 40, 30], cluster_std=1.0, random_state=7)
+
+kmeans = KMeans(n_clusters=4, n_init=10, random_state=42)
+kmeans.fit(X)
+labels = kmeans.labels_
+print("Points per cluster:", np.bincount(labels))
+</script>
+  </section>
+
+
+  <!-- Exercise 2 -->
+  <section class="exercise" id="cluster-sizes">
+    <h3>2. Cluster sizes</h3>
+    <p>
+      The blobs have different sizes. Count how many points are in each cluster and store
+      the counts in <code>sizes</code> (a pandas Series or a dict: cluster number → count).
+      Then store the number of the <strong>biggest</strong> cluster in
+      <code>biggest_cluster</code>, without typing it by hand.
+    </p>
+    <textarea>
+import pandas as pd
+from sklearn.datasets import make_blobs
+from sklearn.cluster import KMeans
+
+X, _ = make_blobs(n_samples=[80, 50, 40, 30], cluster_std=1.0, random_state=7)
+kmeans = KMeans(n_clusters=4, n_init=10, random_state=42).fit(X)
+labels = kmeans.labels_
+
+# Count sizes, then find biggest_cluster
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden>Turn the labels into a Series and count them: <code>pd.Series(labels).value_counts()</code></li>
+      <li hidden>For a tidy result, add <code>.sort_index()</code> so the clusters are in the order 0, 1, 2, 3.</li>
+      <li hidden>The label with the biggest count: <code>biggest_cluster = sizes.idxmax()</code></li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+import numpy as _np
+assert "sizes" in globals(), "Create a variable called sizes."
+_counts = _np.bincount(labels)
+_given = {int(k): int(v) for k, v in dict(sizes).items()}
+assert _given == {i: int(c) for i, c in enumerate(_counts)}, f"sizes doesn't hold the right counts. Expected {dict(enumerate(_counts.tolist()))}."
+assert "biggest_cluster" in globals(), "Create a variable called biggest_cluster."
+assert int(biggest_cluster) == int(_counts.argmax()), f"biggest_cluster should be {_counts.argmax()}, the cluster with {_counts.max()} points."
+assert "idxmax" in __code__ or "argmax" in __code__ or "max(" in __code__ or "index[0]" in __code__, "Find biggest_cluster with code (for example sizes.idxmax()), don't type the number."
+</script>
+<script type="text/python" class="solution">
+import pandas as pd
+from sklearn.datasets import make_blobs
+from sklearn.cluster import KMeans
+
+X, _ = make_blobs(n_samples=[80, 50, 40, 30], cluster_std=1.0, random_state=7)
+kmeans = KMeans(n_clusters=4, n_init=10, random_state=42).fit(X)
+labels = kmeans.labels_
+
+sizes = pd.Series(labels).value_counts().sort_index()
+biggest_cluster = sizes.idxmax()
+print(sizes)
+print("Biggest cluster:", biggest_cluster)
+</script>
+  </section>
+
+
+  <!-- Exercise 3 -->
+  <section class="exercise" id="elbow">
+    <h3>3. Elbow numbers</h3>
+    <p>
+      For every K from 1 to 6, fit a <code>KMeans(n_clusters=k, n_init=10, random_state=42)</code>
+      on <code>X</code> and append its <code>inertia_</code> to the list <code>inertias</code>.
+      Then look at the printed numbers (or draw them) and store the K at the elbow in
+      <code>best_k</code>.
+    </p>
+    <textarea>
+from sklearn.datasets import make_blobs
+from sklearn.cluster import KMeans
+
+X, _ = make_blobs(n_samples=[80, 50, 40, 30], cluster_std=1.0, random_state=7)
+
+inertias = []
+# Loop over k = 1 to 6 here
+
+print([round(value) for value in inertias])
+# best_k = ...
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden><code>for k in range(1, 7):</code> gives 1, 2, 3, 4, 5, 6.</li>
+      <li hidden>Inside: <code>model = KMeans(n_clusters=k, n_init=10, random_state=42).fit(X)</code>, then <code>inertias.append(model.inertia_)</code></li>
+      <li hidden>Find where the big drops stop: after that K, the numbers only shrink a little. The data was made with 4 blobs…</li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+from sklearn.cluster import KMeans as _KMeans
+assert "inertias" in globals(), "Keep the list called inertias."
+assert "for " in __code__, "Use a for loop over k."
+assert len(inertias) == 6, f"inertias should have 6 numbers (K = 1 to 6), but it has {len(inertias)}."
+for _k, _value in zip(range(1, 7), inertias):
+    _expected = _KMeans(n_clusters=_k, n_init=10, random_state=42).fit(X).inertia_
+    assert abs(_value - _expected) < 1e-6 * max(1, _expected), f"The inertia for K={_k} isn't right. Use KMeans(n_clusters=k, n_init=10, random_state=42)."
+assert "best_k" in globals(), "Store the K at the elbow in a variable called best_k."
+assert best_k == 4, f"Look again: where do the big drops stop? best_k = {best_k} isn't the elbow."
+</script>
+<script type="text/python" class="solution">
+from sklearn.datasets import make_blobs
+from sklearn.cluster import KMeans
+
+X, _ = make_blobs(n_samples=[80, 50, 40, 30], cluster_std=1.0, random_state=7)
+
+inertias = []
+for k in range(1, 7):
+    model = KMeans(n_clusters=k, n_init=10, random_state=42).fit(X)
+    inertias.append(model.inertia_)
+
+print([round(value) for value in inertias])
+best_k = 4
+</script>
+  </section>
+
+
+  <!-- Exercise 4 -->
+  <section class="exercise" id="predict-cluster">
+    <h3>4. Which cluster do new points join?</h3>
+    <p>
+      Three new made-up points arrived. Use the fitted <code>kmeans</code> to find their
+      clusters and store the result in <code>new_labels</code>. Then store the centre of the
+      cluster that the <strong>first</strong> new point joined in <code>first_centre</code>.
+    </p>
+    <textarea>
+from sklearn.datasets import make_blobs
+from sklearn.cluster import KMeans
+
+X, _ = make_blobs(n_samples=[80, 50, 40, 30], cluster_std=1.0, random_state=7)
+kmeans = KMeans(n_clusters=4, n_init=10, random_state=42).fit(X)
+
+new_points = [[9, 1], [-8, 6], [0, -9]]
+
+# Find new_labels, then first_centre
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden><code>new_labels = kmeans.predict(new_points)</code></li>
+      <li hidden>The first point's cluster number is <code>new_labels[0]</code>.</li>
+      <li hidden>The centres are rows of <code>kmeans.cluster_centers_</code>: <code>first_centre = kmeans.cluster_centers_[new_labels[0]]</code></li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+import numpy as _np
+assert "new_labels" in globals(), "Create a variable called new_labels."
+assert "predict(" in __code__, "Use kmeans.predict(new_points)."
+_expected = kmeans.predict(new_points)
+assert len(new_labels) == len(new_points), f"new_labels should have one label per new point ({len(new_points)})."
+assert list(new_labels) == list(_expected), f"new_labels should be {list(_expected)}. Use kmeans.predict(new_points)."
+assert "first_centre" in globals(), "Create a variable called first_centre."
+assert "cluster_centers_" in __code__, "Take first_centre from kmeans.cluster_centers_."
+assert _np.allclose(first_centre, kmeans.cluster_centers_[_expected[0]]), "first_centre should be the row of kmeans.cluster_centers_ for the first point's cluster."
+</script>
+<script type="text/python" class="solution">
+from sklearn.datasets import make_blobs
+from sklearn.cluster import KMeans
+
+X, _ = make_blobs(n_samples=[80, 50, 40, 30], cluster_std=1.0, random_state=7)
+kmeans = KMeans(n_clusters=4, n_init=10, random_state=42).fit(X)
+
+new_points = [[9, 1], [-8, 6], [0, -9]]
+
+new_labels = kmeans.predict(new_points)
+first_centre = kmeans.cluster_centers_[new_labels[0]]
+print("New labels:", new_labels)
+print("Centre of the first point's cluster:", first_centre.round(2))
+</script>
+  </section>
+
+
+  <!-- Exercise 5 -->
+  <section class="exercise" id="segments">
+    <h3>5. Challenge: customer segments</h3>
+    <p>Cluster the made-up café customers below into <strong>3 segments</strong>:</p>
+    <ol>
+      <li>Scale the <code>spend</code> and <code>visits</code> columns with <code>StandardScaler</code>.</li>
+      <li>Fit <code>KMeans(n_clusters=3, n_init=10, random_state=42)</code> on the scaled numbers.</li>
+      <li>Add the labels to the table as a new column <code>"cluster"</code>.</li>
+      <li>Store the mean <code>spend</code> and <code>visits</code> of each cluster in <code>summary</code> (use <code>groupby</code>).</li>
+      <li>Store the cluster number with the highest mean spend in <code>top_spenders</code>.</li>
+    </ol>
+    <textarea>
+import numpy as np
+import pandas as pd
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
+
+rng = np.random.default_rng(7)
+n = 30     # made-up data: 30 customers per hidden group
+spend = np.concatenate([rng.normal(200, 40, n), rng.normal(200, 40, n),
+                        rng.normal(600, 60, n)])
+visits = np.concatenate([rng.normal(3, 1, n), rng.normal(15, 2, n),
+                         rng.normal(8, 2, n)])
+cafe = pd.DataFrame({"spend": spend.round(0), "visits": visits.clip(1).round(0)})
+
+# Your code here
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden><code>scaled = StandardScaler().fit_transform(cafe[["spend", "visits"]])</code></li>
+      <li hidden><code>cafe["cluster"] = KMeans(n_clusters=3, n_init=10, random_state=42).fit_predict(scaled)</code></li>
+      <li hidden><code>summary = cafe.groupby("cluster")[["spend", "visits"]].mean()</code> and <code>top_spenders = summary["spend"].idxmax()</code></li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+from sklearn.preprocessing import StandardScaler as _Scaler
+from sklearn.cluster import KMeans as _KMeans
+assert "StandardScaler" in __code__.split("# Your code here")[-1], "Scale spend and visits with StandardScaler first."
+assert "cluster" in cafe.columns, "Add a column called \"cluster\" to cafe."
+_scaled = _Scaler().fit_transform(cafe[["spend", "visits"]])
+_labels = _KMeans(n_clusters=3, n_init=10, random_state=42).fit_predict(_scaled)
+_raw = _KMeans(n_clusters=3, n_init=10, random_state=42).fit_predict(cafe[["spend", "visits"]])
+assert list(cafe["cluster"]) != list(_raw) or list(_raw) == list(_labels), "Your clusters look like they were made from the unscaled numbers. Fit KMeans on the scaled values."
+assert list(cafe["cluster"]) == list(_labels), "The cluster column isn't right. Fit KMeans(n_clusters=3, n_init=10, random_state=42) on the scaled spend and visits."
+assert "summary" in globals(), "Create a variable called summary with groupby."
+assert "spend" in summary.columns and "visits" in summary.columns, "summary should have the columns spend and visits."
+assert len(summary) == 3, f"summary should have one row per cluster (3), but it has {len(summary)}."
+_means = cafe.groupby("cluster")["spend"].mean()
+assert all(abs(summary.loc[c, "spend"] - _means[c]) < 0.06 for c in _means.index), "summary should hold the MEAN spend of each cluster: .groupby(\"cluster\")[...].mean()."
+assert "top_spenders" in globals(), "Create a variable called top_spenders."
+assert int(top_spenders) == int(_means.idxmax()), f"top_spenders should be {_means.idxmax()}, the cluster with the highest mean spend."
+assert "idxmax" in __code__ or "sort_values" in __code__ or "argmax" in __code__ or "max(" in __code__, "Find top_spenders with code (for example summary[\"spend\"].idxmax())."
+</script>
+<script type="text/python" class="solution">
+import numpy as np
+import pandas as pd
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
+
+rng = np.random.default_rng(7)
+n = 30     # made-up data: 30 customers per hidden group
+spend = np.concatenate([rng.normal(200, 40, n), rng.normal(200, 40, n),
+                        rng.normal(600, 60, n)])
+visits = np.concatenate([rng.normal(3, 1, n), rng.normal(15, 2, n),
+                         rng.normal(8, 2, n)])
+cafe = pd.DataFrame({"spend": spend.round(0), "visits": visits.clip(1).round(0)})
+
+scaled = StandardScaler().fit_transform(cafe[["spend", "visits"]])
+model = KMeans(n_clusters=3, n_init=10, random_state=42)
+cafe["cluster"] = model.fit_predict(scaled)
+
+summary = cafe.groupby("cluster")[["spend", "visits"]].mean()
+top_spenders = summary["spend"].idxmax()
+print(summary.round(1))
+print("Top spenders: cluster", top_spenders)
+</script>
+  </section>
+
+
+  <!-- Shown when all exercises are done -->
+  <section id="finished" class="finished" hidden>
+    <h2>🏆 Day 21 complete!</h2>
+    <p>You found groups nobody labelled. That's unsupervised learning, done.</p>
+  </section>
+
+
+  <!-- =============================================================
+       TOMORROW
+       ============================================================= -->
+  <h2>🔜 Tomorrow</h2>
+  <p>
+    <strong>Mini-project: survival predictor.</strong> Remember the made-up
+    <em>Northern Star</em> passengers from Day 15? Tomorrow you'll put the whole Machine
+    Learning phase together: clean the data, turn text columns into numbers, train and
+    compare models, evaluate them properly, and predict survival for new made-up passengers.
+  </p>
+
+
+  <footer class="screen-only">
+    <p>
+      Your answers are saved in this browser only. Python downloads the first time you open
+      the page, so you need an internet connection.
+    </p>
+    <button id="erase-progress" class="quiet">Erase my answers for this day</button>
+  </footer>
+
+</main>
+
+<!-- Shows whether Python is loading or ready -->
+<div id="python-status" role="status"></div>
+
+<script src="script.js"></script>
+</body>
+</html>

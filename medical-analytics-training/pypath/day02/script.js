@@ -102,7 +102,7 @@ def _error_info(err):
     else:
         te = traceback.TracebackException.from_exception(err)
         te.stack = traceback.StackSummary.from_list([f for f in te.stack if f.filename == CELL])
-        lines = list(te.format())
+        lines = list(te.format(chain=False))   # skip "During handling…" errors from libraries
         if len(lines) > 1 and not te.stack:
             lines = lines[1:]
     text = "".join(lines).replace('File "<cell>", ', "")

@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Day 16: What is machine learning? Train/test split · PyPath</title>
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Python for the browser (Pyodide). Downloaded the first time, then cached. -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v314.0.7/full/pyodide.js"></script>
+</head>
+
+<body data-day="day16">
+<main>
+
+  <!-- =============================================================
+       HEADER
+       ============================================================= -->
+  <header class="lesson-header">
+    <p class="muted small">Machine Learning · Day 16 of 30 · about 60 minutes</p>
+    <h1>What is machine learning? Train/test split</h1>
+    <div class="tools">
+      <button id="reset-variables" class="quiet" title="Forget all variables created by this page's code boxes">↺ Forget variables</button>
+    </div>
+  </header>
+
+
+  <!-- =============================================================
+       TODAY'S GOAL
+       ============================================================= -->
+  <h2>🎯 Today's goal</h2>
+  <p>By the end of this hour you will:</p>
+  <ul>
+    <li>know the difference between writing <strong>rules</strong> and <strong>learning from examples</strong></li>
+    <li>split a table into <strong>features</strong> (<code>X</code>) and a <strong>label</strong> (<code>y</code>)</li>
+    <li>split the data into a <strong>training set</strong> and a <strong>test set</strong>, and know why</li>
+    <li>train your first model with scikit-learn: <strong>create → fit → predict → score</strong></li>
+    <li>compare your model with a simple <strong>baseline</strong></li>
+  </ul>
+
+
+  <!-- =============================================================
+       WHY THIS MATTERS
+       ============================================================= -->
+  <h2>🤔 Why this matters</h2>
+  <p>
+    Until now, <em>you</em> found the patterns: on Day 15 you discovered that women and
+    first-class passengers survived more often. <strong>Machine learning</strong> (ML) means
+    letting the computer find patterns by itself, from examples, and then use them to make
+    guesses about new cases it has never seen.
+  </p>
+  <p>
+    It's how a child learns what a dog is. Nobody gives them a rule book ("four legs, fur,
+    barks…"). They see many dogs and many cats, someone says which is which, and after a while
+    they can recognise a dog they've never met. Spam filters, film recommendations and
+    medical image tools all learn this way.
+  </p>
+  <p class="note screen-only">
+    <strong>Remember:</strong> the code boxes on this page share their variables, like pages of
+    one notebook. Run them <strong>from top to bottom</strong>. The first box that uses
+    scikit-learn needs a few extra seconds to load it.
+  </p>
+
+
+  <!-- =============================================================
+       RULES VS LEARNING
+       ============================================================= -->
+  <h2>📏 Rules versus learning</h2>
+  <p>
+    The old way is to write the rules yourself with <code>if</code> / <code>else</code> (Day 4).
+    Here's a hand-written rule that guesses a fruit from its weight and how smooth its skin is
+    (0 = very bumpy, 10 = very smooth):
+  </p>
+
+  <div class="cell">
+    <textarea>
+def guess_fruit(weight, smoothness):
+    """A rule I wrote myself after looking at some fruit."""
+    if smoothness > 6:
+        return "apple"
+    else:
+        return "orange"
+
+print(guess_fruit(150, 8))
+print(guess_fruit(170, 3))
+print(guess_fruit(140, 6))   # smooth-ish orange or bumpy apple?</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    This works for easy cases, but who decided that <code>6</code> is the right cut-off? And
+    what about the weight? With 2 measurements you can still invent rules; with 30
+    measurements, nobody can. In machine learning we turn it around:
+  </p>
+  <ul>
+    <li><strong>Rules:</strong> you write the rules → the computer applies them to data → answers.</li>
+    <li><strong>Machine learning:</strong> you give data <em>and</em> the right answers → the computer <em>works out</em> the rules → it can answer new cases.</li>
+  </ul>
+
+
+  <!-- =============================================================
+       NEW WORDS
+       ============================================================= -->
+  <h2>📖 The words you'll hear every day from now on</h2>
+  <table>
+    <thead>
+      <tr><th>Word</th><th>Meaning</th><th>In the fruit example</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>feature</strong></td><td>a measurement we know about each example (an input column)</td><td>weight, smoothness</td></tr>
+      <tr><td><strong>label</strong> (or <strong>target</strong>)</td><td>the answer we want to predict</td><td>"apple" or "orange"</td></tr>
+      <tr><td><strong>model</strong></td><td>the thing that learns the pattern and then makes guesses</td><td>a "fruit guesser"</td></tr>
+      <tr><td><strong>fit</strong> (or <strong>train</strong>)</td><td>let the model learn from examples with known labels</td><td>show it 100 labelled fruits</td></tr>
+      <tr><td><strong>predict</strong></td><td>ask the model for its guess on new examples</td><td>"what is this new fruit?"</td></tr>
+    </tbody>
+  </table>
+  <p>
+    By tradition the features are stored in a variable called <code>X</code> (capital, because
+    it's a whole table) and the labels in <code>y</code> (lower case, because it's one column).
+  </p>
+  <p>Two more pairs of words describe the <em>kind</em> of problem:</p>
+  <ul>
+    <li><strong>Supervised</strong> learning: every example comes with its label, like a teacher who gives the answers while you practise. That's all of this week.
+      <strong>Unsupervised</strong> learning: no labels at all, the computer just looks for groups (Day 21).</li>
+    <li><strong>Classification</strong>: the label is a category (apple / orange, survived / didn't, spam / not spam).
+      <strong>Regression</strong>: the label is a number (a price, a temperature). Day 17 is about regression.</li>
+  </ul>
+
+
+  <!-- =============================================================
+       THE IRIS DATA
+       ============================================================= -->
+  <h2>🌸 Our first real dataset: iris flowers</h2>
+  <p>
+    <strong>scikit-learn</strong> (imported as <code>sklearn</code>) is the most popular Python
+    library for machine learning. It comes with a few small datasets built in. The most famous
+    one measures 150 <em>iris</em> flowers of three species. This one is <strong>real</strong>
+    data, collected in the 1930s, and it's been used to teach ML for decades:
+  </p>
+
+  <div class="cell">
+    <textarea>
+import pandas as pd
+from sklearn.datasets import load_iris
+
+iris = load_iris(as_frame=True)     # as_frame=True gives us pandas tables
+flowers = iris.frame
+flowers.head()</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    Four measurements in centimetres (the <em>sepal</em> is the green leaf under the petals),
+    and a <code>target</code> column with the species as a number. The numbers stand for names:
+  </p>
+
+  <div class="cell">
+    <textarea>
+print("Species names:", iris.target_names.tolist())   # 0, 1, 2 in this order
+print()
+print(flowers["target"].value_counts())</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    So <code>0</code> = setosa, <code>1</code> = versicolor, <code>2</code> = virginica, with 50
+    flowers each. Models need numbers, which is why the species are stored as 0, 1, 2.
+  </p>
+
+
+  <!-- =============================================================
+       X AND Y
+       ============================================================= -->
+  <h2>✂️ Features <code>X</code> and label <code>y</code></h2>
+  <p>
+    The features are the four measurement columns; the label is <code>target</code>. You could
+    pick them with pandas (Day 10), but <code>iris</code> already has them ready:
+  </p>
+
+  <div class="cell">
+    <textarea>
+X = iris.data       # the 4 measurement columns (a DataFrame)
+y = iris.target     # the species, 0 / 1 / 2 (a Series)
+
+print("X shape:", X.shape)   # 150 rows, 4 features
+print("y shape:", y.shape)   # 150 labels
+X.head(3)</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+
+  <!-- =============================================================
+       TRAIN / TEST SPLIT
+       ============================================================= -->
+  <h2>📚 Why we hide some data: the train/test split</h2>
+  <p>
+    Imagine a teacher gives the class the exact exam questions to practise. Everybody scores
+    100%, but did anybody <em>learn</em> anything, or did they just <strong>memorise</strong>?
+    The only fair test uses questions the students have never seen.
+  </p>
+  <p>
+    Models are the same. So before training, we put part of the data aside:
+  </p>
+  <ul>
+    <li>the <strong>training set</strong> (usually 70–80%): the model learns from it</li>
+    <li>the <strong>test set</strong> (the other 20–30%): kept hidden, used only at the end to check how well the model does on flowers it has never seen</li>
+  </ul>
+  <p><code>train_test_split</code> shuffles the rows and cuts them into the two parts:</p>
+
+  <div class="cell">
+    <textarea>
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y,
+    test_size=0.25,      # 25% of the rows go to the test set
+    random_state=42,     # shuffle the same way every time
+    stratify=y,          # keep the same mix of species in both parts
+)
+
+print("Training rows:", len(X_train))
+print("Test rows:    ", len(X_test))</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    It returns <strong>four</strong> things, always in this order: <code>X_train, X_test, y_train,
+    y_test</code>. You unpack them into four variables in one line, like you unpacked tuples on
+    Day 6.
+  </p>
+  <p>
+    <code>random_state=42</code> works like the NumPy seed: the shuffle is "random" but the same
+    every time, so your results match this page. <code>stratify=y</code> makes sure each species
+    is shared out fairly. Without it, by bad luck, the test set might get almost no setosas:
+  </p>
+
+  <div class="cell">
+    <textarea>
+print("Species in the test set:")
+print(y_test.value_counts())</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+
+  <!-- =============================================================
+       FIRST MODEL
+       ============================================================= -->
+  <h2>🤖 Your first model</h2>
+  <p>
+    Every scikit-learn model is used with the same four steps. Learn them once and you can use
+    dozens of different models:
+  </p>
+  <ol>
+    <li><strong>create</strong> the model: <code>model = SomeModel()</code></li>
+    <li><strong>fit</strong> it on the training data: <code>model.fit(X_train, y_train)</code></li>
+    <li><strong>predict</strong> new cases: <code>model.predict(X_test)</code></li>
+    <li><strong>score</strong> it on the test data: <code>model.score(X_test, y_test)</code></li>
+  </ol>
+  <p>
+    Our first model is called <strong>k-nearest neighbours</strong> (KNN). Its idea is simple:
+    to guess the species of a new flower, find the 5 training flowers that are most similar
+    to it, and let them vote. You'll look inside it on Day 18.
+  </p>
+
+  <div class="cell">
+    <textarea>
+from sklearn.neighbors import KNeighborsClassifier
+
+model = KNeighborsClassifier(n_neighbors=5)   # 1. create
+model.fit(X_train, y_train)                   # 2. fit (learn)
+
+predictions = model.predict(X_test)           # 3. predict the test set
+print("Model's guesses:", predictions[:10].tolist())
+print("Real answers:   ", y_test.head(10).tolist())</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    The first 10 guesses look right. To measure all of them, use <strong>accuracy</strong>: the
+    share of test examples the model got right. <code>score</code> calculates it:
+  </p>
+
+  <div class="cell">
+    <textarea>
+accuracy = model.score(X_test, y_test)        # 4. score
+print(f"Accuracy on unseen flowers: {accuracy:.1%}")</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    There's no magic inside <code>score</code>. Compare the guesses with the answers (that gives
+    True/False for each flower) and take the mean, the same 0/1 trick as yesterday's survival
+    rates:
+  </p>
+
+  <div class="cell">
+    <textarea>
+correct = predictions == y_test        # True where the guess was right
+print("Right:", correct.sum(), "of", len(y_test))
+print("Accuracy by hand:", correct.mean())</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    A model must be fitted before it can predict. A brand-new model hasn't learned anything
+    yet, so asking it for a guess gives an error:
+  </p>
+
+  <div class="cell error-demo">
+    <textarea>
+new_model = KNeighborsClassifier()
+new_model.predict(X_test)        # oops: we forgot new_model.fit(...)</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p class="muted small">The message says it plainly: <em>not fitted yet. Call 'fit' … before using this estimator</em> ("estimator" is scikit-learn's word for a model).</p>
+
+
+  <!-- =============================================================
+       PREDICTING A NEW FLOWER
+       ============================================================= -->
+  <h2>🔮 Predicting brand-new flowers</h2>
+  <p>
+    The whole point of a model is to answer questions about new cases. Here are two flowers we
+    just "measured" (made-up measurements). They must be in the same 4 columns as
+    <code>X</code>, so we put them in a small DataFrame:
+  </p>
+
+  <div class="cell">
+    <textarea>
+new_flowers = pd.DataFrame(
+    [[5.0, 3.4, 1.5, 0.2],      # short, narrow petals
+     [6.5, 3.0, 5.5, 2.0]],     # long, wide petals
+    columns=X.columns,
+)
+guesses = model.predict(new_flowers)
+for number in guesses:
+    print("This looks like a", iris.target_names[number])</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p class="note">
+    <strong>Two pairs of brackets:</strong> models always expect a <em>table</em> of examples,
+    even for a single flower. One flower is one row: <code>[[5.0, 3.4, 1.5, 0.2]]</code>.
+  </p>
+
+
+  <!-- =============================================================
+       MEMORISING
+       ============================================================= -->
+  <h2>🧠 Memorising versus learning</h2>
+  <p>
+    Here's the exam story in code. A <strong>decision tree</strong> (Day 19) is a model that can
+    memorise its training data perfectly. Let's score it on the training set <em>and</em> on the
+    test set:
+  </p>
+
+  <div class="cell">
+    <textarea>
+from sklearn.tree import DecisionTreeClassifier
+
+tree = DecisionTreeClassifier(random_state=42)
+tree.fit(X_train, y_train)
+
+print(f"Score on the training set: {tree.score(X_train, y_train):.1%}")
+print(f"Score on the test set:     {tree.score(X_test, y_test):.1%}")</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    100% on the flowers it practised on, but less on new ones. If we had only checked the
+    training set, we'd believe the model was perfect. <strong>Always judge a model on data it
+    hasn't seen.</strong>
+  </p>
+
+
+  <!-- =============================================================
+       BASELINE
+       ============================================================= -->
+  <h2>🪜 Is 97% good? Compare with a baseline</h2>
+  <p>
+    A score means little on its own. A <strong>baseline</strong> is the score of a
+    "lazy" model that doesn't look at the features at all, for example one that always
+    guesses the most common species. A real model must beat it clearly, otherwise it learned
+    nothing useful. scikit-learn has such a lazy model, called <code>DummyClassifier</code>:
+  </p>
+
+  <div class="cell">
+    <textarea>
+from sklearn.dummy import DummyClassifier
+
+# always guesses the most common label:
+lazy = DummyClassifier(strategy="most_frequent")
+lazy.fit(X_train, y_train)
+
+print(f"Baseline accuracy: {lazy.score(X_test, y_test):.1%}")
+print(f"KNN accuracy:      {model.score(X_test, y_test):.1%}")</textarea>
+    <div class="buttons">
+      <button class="run">▶ Run</button>
+      <button class="reset quiet" hidden>↺ Reset</button>
+      <span class="shortcut">Shift + Enter</span>
+    </div>
+    <div class="output"></div>
+  </div>
+
+  <p>
+    With three equal species, always guessing the same one is right about a third of the
+    time. Our model is far better than that. Baselines matter even more when one answer is
+    very common: on Day 15's ship, guessing "did not survive" for everyone would already be
+    right 59% of the time.
+  </p>
+
+
+  <!-- =============================================================
+       COMMON MISTAKES + RECAP
+       ============================================================= -->
+  <h2>⚠️ Common mistakes</h2>
+  <ul>
+    <li>Judging a model on its training data. It may have just memorised it.</li>
+    <li>Mixing up the order: it's <code>X_train, X_test, y_train, y_test = train_test_split(X, y, ...)</code>.</li>
+    <li>Calling <code>predict</code> before <code>fit</code> → <code>NotFittedError</code>.</li>
+    <li>Giving one example with single brackets <code>[5.0, 3.4, 1.5, 0.2]</code>: models want a table, <code>[[...]]</code>.</li>
+    <li>Forgetting <code>random_state=42</code>, so your numbers change every run and don't match the page.</li>
+    <li>Getting excited about an accuracy without checking the baseline.</li>
+  </ul>
+
+  <h2>✅ Recap</h2>
+  <ul>
+    <li>Machine learning = learning the rules from labelled examples, instead of writing them by hand.</li>
+    <li>Features <code>X</code> are the inputs, the label <code>y</code> is the answer. Classification predicts categories, regression predicts numbers.</li>
+    <li><code>train_test_split(X, y, test_size=0.25, random_state=42, stratify=y)</code> hides a test set.</li>
+    <li>Every model: <strong>create → fit → predict → score</strong>.</li>
+    <li>Accuracy = share of correct guesses = <code>(predictions == y_test).mean()</code>.</li>
+    <li>Always compare with a baseline such as <code>DummyClassifier(strategy="most_frequent")</code>.</li>
+  </ul>
+
+
+  <!-- =============================================================
+       EXERCISES
+       Each exercise has: a task, a starting code box, hints,
+       hidden tests (<script class="tests">) and a solution
+       (<script class="solution">). The tests are Python "assert" lines
+       and can look at the variables the answer created.
+       ============================================================= -->
+  <h2>🏋️ Exercises</h2>
+  <p class="screen-only">
+    Write your answer in the box and click <strong>✓ Check my answer</strong>. Stuck? Use the
+    hints. After 3 tries you can see a solution. Each exercise box starts from its own data,
+    because exercises don't see the lesson's variables.
+  </p>
+  <p class="print-only">
+    Write your answer in the space under each exercise. Try it on the computer too, by opening
+    this day's <code>index.html</code>. Solutions are in the answer key at the end.
+  </p>
+
+  <div class="score">
+    <div class="bar"><div id="score-bar"></div></div>
+    <span id="score-text" class="muted small">0 / 5 done</span>
+  </div>
+
+
+  <!-- Exercise 1 -->
+  <section class="exercise" id="make-x-y">
+    <h3>1. Features and label</h3>
+    <p>
+      A made-up table of fruits. Store the two feature columns <code>weight</code> and
+      <code>smoothness</code> in <code>X</code> (a DataFrame), and the <code>fruit</code> column in
+      <code>y</code> (the label).
+    </p>
+    <textarea>
+import pandas as pd
+
+fruits = pd.DataFrame({
+    "weight": [150, 170, 140, 130, 180, 160],
+    "smoothness": [8, 3, 7, 9, 2, 4],
+    "fruit": ["apple", "orange", "apple", "apple", "orange", "orange"],
+})
+
+# X = ...
+# y = ...
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden>Several columns: a list inside the square brackets, <code>fruits[["weight", "smoothness"]]</code>.</li>
+      <li hidden>One column: <code>fruits["fruit"]</code>.</li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+assert "X" in globals(), "Create a variable called X (capital X)."
+assert "y" in globals(), "Create a variable called y (lower-case y)."
+assert isinstance(X, pd.DataFrame), "X should be a DataFrame: use double brackets, fruits[[...]]."
+assert list(X.columns) == ["weight", "smoothness"], f"X should have the columns weight and smoothness, but it has {list(X.columns)}."
+assert "fruit" not in X.columns, "The label must not be inside X, or the model would see the answer!"
+assert isinstance(y, pd.Series), "y should be one column: fruits[\"fruit\"]."
+assert list(y) == list(fruits["fruit"]), "y should be the fruit column."
+</script>
+<script type="text/python" class="solution">
+import pandas as pd
+
+fruits = pd.DataFrame({
+    "weight": [150, 170, 140, 130, 180, 160],
+    "smoothness": [8, 3, 7, 9, 2, 4],
+    "fruit": ["apple", "orange", "apple", "apple", "orange", "orange"],
+})
+
+X = fruits[["weight", "smoothness"]]
+y = fruits["fruit"]
+</script>
+  </section>
+
+
+  <!-- Exercise 2 -->
+  <section class="exercise" id="split-sizes">
+    <h3>2. Split the flowers</h3>
+    <p>
+      Split the iris data into <code>X_train, X_test, y_train, y_test</code> with
+      <strong>20%</strong> of the rows in the test set, <code>random_state=42</code> and a fair mix
+      of species (<code>stratify</code>). Then print how many rows each part has.
+    </p>
+    <textarea>
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+
+iris = load_iris(as_frame=True)
+X = iris.data
+y = iris.target
+
+# Split here
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden>20% is <code>test_size=0.2</code>.</li>
+      <li hidden>The order of the four results is <code>X_train, X_test, y_train, y_test</code>.</li>
+      <li hidden><code>X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)</code></li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+for name in ["X_train", "X_test", "y_train", "y_test"]:
+    assert name in globals(), f"Create the variable {name} (unpack all four results of train_test_split)."
+assert len(X_test) == 30 and len(X_train) == 120, f"With 20% in the test set you should get 120 training and 30 test rows, but you have {len(X_train)} and {len(X_test)}."
+assert len(y_test) == 30, "y_test should have 30 labels. Check the order: X_train, X_test, y_train, y_test."
+assert X_test.shape[1] == 4, "X_test should have the 4 feature columns. Check the order: X_train, X_test, y_train, y_test."
+assert "random_state=42" in __code__.replace(" ", ""), "Add random_state=42 so the split is the same every time."
+assert sorted(y_test.value_counts().tolist()) == [10, 10, 10], "Each species should have 10 flowers in the test set. Add stratify=y."
+</script>
+<script type="text/python" class="solution">
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+
+iris = load_iris(as_frame=True)
+X = iris.data
+y = iris.target
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y)
+print("Training rows:", len(X_train))
+print("Test rows:", len(X_test))
+</script>
+  </section>
+
+
+  <!-- Exercise 3 -->
+  <section class="exercise" id="first-model">
+    <h3>3. Train your own model</h3>
+    <p>
+      The data is already split. Create a <code>KNeighborsClassifier</code> called
+      <code>model</code>, fit it on the <strong>training</strong> set, and store its accuracy on the
+      <strong>test</strong> set in <code>accuracy</code>. It should reach at least 90%.
+    </p>
+    <textarea>
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+
+iris = load_iris(as_frame=True)
+X_train, X_test, y_train, y_test = train_test_split(
+    iris.data, iris.target, test_size=0.2, random_state=42, stratify=iris.target)
+
+# Create, fit and score the model
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden>Create: <code>model = KNeighborsClassifier(n_neighbors=5)</code></li>
+      <li hidden>Fit on the training part: <code>model.fit(X_train, y_train)</code></li>
+      <li hidden>Score on the test part: <code>accuracy = model.score(X_test, y_test)</code></li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+assert "model" in globals(), "Create a variable called model."
+assert isinstance(model, KNeighborsClassifier), "model should be a KNeighborsClassifier()."
+assert hasattr(model, "classes_"), "The model isn't fitted yet. Call model.fit(X_train, y_train)."
+assert model.n_samples_fit_ == len(X_train), "Fit the model on the training set (X_train, y_train), not on the test set."
+assert "accuracy" in globals(), "Store the score in a variable called accuracy."
+expected = model.score(X_test, y_test)
+assert abs(accuracy - expected) < 1e-9, f"accuracy should be the score on the test set ({expected:.3f}), but it is {accuracy}."
+assert accuracy >= 0.9, f"The accuracy is only {accuracy:.0%}. It should be at least 90%."
+</script>
+<script type="text/python" class="solution">
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+
+iris = load_iris(as_frame=True)
+X_train, X_test, y_train, y_test = train_test_split(
+    iris.data, iris.target, test_size=0.2, random_state=42, stratify=iris.target)
+
+model = KNeighborsClassifier(n_neighbors=5)
+model.fit(X_train, y_train)
+accuracy = model.score(X_test, y_test)
+print(f"Accuracy: {accuracy:.1%}")
+</script>
+  </section>
+
+
+  <!-- Exercise 4 -->
+  <section class="exercise" id="manual-accuracy">
+    <h3>4. Accuracy by hand</h3>
+    <p>
+      A made-up spam filter guessed 10 e-mails (1 = spam, 0 = not spam). Without scikit-learn,
+      calculate the share of correct guesses and store it in <code>accuracy</code>.
+    </p>
+    <textarea>
+import numpy as np
+
+real_answers = np.array([1, 0, 0, 1, 1, 0, 0, 0, 1, 0])
+guesses      = np.array([1, 0, 1, 1, 0, 0, 0, 0, 1, 0])
+
+# accuracy = ...
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden><code>guesses == real_answers</code> gives True where a guess is right.</li>
+      <li hidden>The mean of True/False values is the share of Trues.</li>
+      <li hidden><code>accuracy = (guesses == real_answers).mean()</code></li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+assert "accuracy" in globals(), "Create a variable called accuracy."
+expected = (guesses == real_answers).mean()
+assert abs(accuracy - expected) < 1e-9, f"accuracy should be {expected}, but it is {accuracy}. Count the matching positions and divide by 10."
+assert "==" in __code__, "Compare the guesses with the real answers using ==."
+assert "sklearn" not in __code__, "Try it without scikit-learn this time."
+</script>
+<script type="text/python" class="solution">
+import numpy as np
+
+real_answers = np.array([1, 0, 0, 1, 1, 0, 0, 0, 1, 0])
+guesses      = np.array([1, 0, 1, 1, 0, 0, 0, 0, 1, 0])
+
+accuracy = (guesses == real_answers).mean()
+print(accuracy)
+</script>
+  </section>
+
+
+  <!-- Exercise 5 -->
+  <section class="exercise" id="baseline-vs-model">
+    <h3>5. Challenge: baseline versus model</h3>
+    <p>
+      Using the split in the starter, store the test accuracy of a
+      <code>DummyClassifier(strategy="most_frequent")</code> in <code>baseline_acc</code> and of a
+      <code>KNeighborsClassifier(n_neighbors=5)</code> in <code>model_acc</code>. Then store how many
+      percentage points better the model is in <code>gain</code> (for example, 0.95 − 0.40 = 0.55
+      is a gain of <code>55.0</code>), and print a line like <code>The model beats the baseline by 55.0 points</code>.
+    </p>
+    <textarea>
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.dummy import DummyClassifier
+
+iris = load_iris(as_frame=True)
+X_train, X_test, y_train, y_test = train_test_split(
+    iris.data, iris.target, test_size=0.3, random_state=42, stratify=iris.target)
+
+# baseline_acc = ...
+# model_acc = ...
+# gain = ...
+</textarea>
+    <div class="buttons">
+      <button class="check">✓ Check my answer</button>
+      <button class="start-over quiet">↺ Start over</button>
+      <button class="hint quiet">💡 Hint</button>
+      <button class="show-solution quiet" hidden>👀 Show solution</button>
+      <span class="tries-note muted small" hidden></span>
+    </div>
+    <ol class="hints" hidden>
+      <li hidden>Both models follow the same steps: create, <code>fit(X_train, y_train)</code>, <code>score(X_test, y_test)</code>.</li>
+      <li hidden>Percentage points: <code>gain = (model_acc - baseline_acc) * 100</code></li>
+      <li hidden><code>print(f"The model beats the baseline by {gain:.1f} points")</code></li>
+    </ol>
+    <div class="output"></div>
+    <div class="result" hidden></div>
+    <div class="solution-box" hidden>
+      <strong>One possible solution</strong>
+      <pre></pre>
+      <button class="copy-solution quiet">Copy into my box</button>
+    </div>
+<script type="text/python" class="tests">
+for name in ["baseline_acc", "model_acc", "gain"]:
+    assert name in globals(), f"Create a variable called {name}."
+exp_base = DummyClassifier(strategy="most_frequent").fit(X_train, y_train).score(X_test, y_test)
+exp_model = KNeighborsClassifier(n_neighbors=5).fit(X_train, y_train).score(X_test, y_test)
+assert abs(baseline_acc - exp_base) < 1e-9, f"baseline_acc should be the DummyClassifier's test accuracy ({exp_base:.3f}), but it is {baseline_acc}."
+assert abs(model_acc - exp_model) < 1e-9, f"model_acc should be the KNN's test accuracy ({exp_model:.3f}), but it is {model_acc}."
+exp_gain = (exp_model - exp_base) * 100
+assert abs(gain - exp_gain) < 0.01, f"gain should be (model_acc - baseline_acc) * 100 = {exp_gain:.1f}, but it is {gain}."
+assert ".score(" in __code__ and ".fit(" in __code__, "Fit and score the models with code, don't type the numbers."
+line = f"The model beats the baseline by {exp_gain:.1f} points"
+assert line in __lines__, f"Print the line exactly like: {line}"
+</script>
+<script type="text/python" class="solution">
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.dummy import DummyClassifier
+
+iris = load_iris(as_frame=True)
+X_train, X_test, y_train, y_test = train_test_split(
+    iris.data, iris.target, test_size=0.3, random_state=42, stratify=iris.target)
+
+lazy = DummyClassifier(strategy="most_frequent")
+lazy.fit(X_train, y_train)
+baseline_acc = lazy.score(X_test, y_test)
+
+model = KNeighborsClassifier(n_neighbors=5)
+model.fit(X_train, y_train)
+model_acc = model.score(X_test, y_test)
+
+gain = (model_acc - baseline_acc) * 100
+print(f"The model beats the baseline by {gain:.1f} points")
+</script>
+  </section>
+
+
+  <!-- Shown when all exercises are done -->
+  <section id="finished" class="finished" hidden>
+    <h2>🏆 Day 16 complete!</h2>
+    <p>
+      You trained and fairly tested your first machine learning model. Create → fit → predict →
+      score will follow you through the rest of the course.
+    </p>
+  </section>
+
+
+  <!-- =============================================================
+       TOMORROW
+       ============================================================= -->
+  <h2>🔜 Tomorrow</h2>
+  <p>
+    <strong>Linear regression: predicting numbers.</strong> Today the label was a category
+    (a species). Tomorrow it's a number: you'll predict made-up apartment prices from their
+    size by fitting a straight line, learn how to measure how far off the predictions are
+    (MAE, RMSE, R²), and then use several features at once.
+  </p>
+
+
+  <footer class="screen-only">
+    <p>
+      Your answers are saved in this browser only. Python downloads the first time you open
+      the page, so you need an internet connection.
+    </p>
+    <button id="erase-progress" class="quiet">Erase my answers for this day</button>
+  </footer>
+
+</main>
+
+<!-- Shows whether Python is loading or ready -->
+<div id="python-status" role="status"></div>
+
+<script src="script.js"></script>
+</body>
+</html>
